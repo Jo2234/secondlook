@@ -2,7 +2,7 @@ import { open, mkdir, lstat, realpath, rename, unlink, rm } from 'node:fs/promis
 import type { FileHandle } from 'node:fs/promises';
 import { constants, type BigIntStats } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { ArtifactRecoverySchema, DeletionReceiptSchema, GeneratedImageSchema, LedgerEntrySchema, ListingSchema, PreflightRecordSchema, QualityReportSchema, StoredPhotoSchema, TryOnJobSchema } from '../shared/schemas.js';
 import { assertStoreBounds, emptyState } from '../youcam/workflow-state.js';
@@ -77,6 +77,15 @@ export class StoreIOError extends Error {
   constructor(readonly operation: StoreIOOperation) { super('store_io_UNKNOWN'); }
 }
 interface Closable { close(): Promise<void> }
+export type StoreReadOutcome<T> = { kind: 'present'; bytes: T } | { kind: 'missing'; error: NodeJS.ErrnoException };
+function isInitialReadAbsence(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT';
+}
+/** Unwrap OUTSIDE retained IO observers so ordinary callers keep the original ENOENT. */
+export function storeReadValue<T>(outcome: StoreReadOutcome<T>): T {
+  if (outcome.kind === 'missing') throw outcome.error;
+  return outcome.bytes;
+}
 interface RetainedOperation { task: Promise<unknown>; done: Promise<void>; settled: boolean; error?: unknown }
 interface RetainedHandle { closeTask?: Promise<void> }
 // Strong module roots also cover default/standalone acquire rejection before Store fulfillment.
@@ -153,6 +162,28 @@ export class RetainedStoreIO<H extends Closable> {
   status() { return { unknown: this.faults.length > 0, faults: this.faults.length, handles: this.handles.size,
     pending: [...this.operations].filter(record => !record.settled).length, retainedOperations: this.operations.size, released: this.released }; }
 }
+/** Caller publishes its read operation first. Only the initial open can prove absence.
+ * Capture in the open continuation, before any other fallible work; read/close are never caught here.
+ */
+export async function readStoreOpenOutcome<H extends Closable, T>(io: RetainedStoreIO<H>,
+  openHandle: () => Promise<H>, read: (handle: H) => Promise<T>, optional = true): Promise<StoreReadOutcome<T>> {
+  let handle: H;
+  try { handle = await openHandle(); }
+  catch (error) {
+    if (optional && isInitialReadAbsence(error)) return { kind: 'missing', error };
+    throw error;
+  }
+  io.capture(handle);
+  return { kind: 'present', bytes: await io.use(handle, 'read', read) };
+}
+/** Actual startup recovery decision and commit; positive bytes are hashed only after actual close. */
+export async function recoverStoreArtifact(store: StateStore, image: WorkflowState['images'][number],
+  outcome: StoreReadOutcome<Uint8Array>): Promise<void> {
+  const missing = outcome.kind === 'missing' || createHash('sha256').update(outcome.bytes).digest('hex') !== image.sha256;
+  if (missing && !image.artifactMissing) await store.commit(state => {
+    state.images.find(i => i.id === image.id)!.artifactMissing = true; return state;
+  });
+}
 /** Injected byte/identity primitive; caller owns and independently closes the captured handle. */
 export async function readBoundedStoreData(cap: number, actions: {
   size(): Promise<number>; read(bytes: Uint8Array, offset: number, remaining: number): Promise<number>; unchanged(): Promise<boolean>;
@@ -224,17 +255,19 @@ export class StoreIOOwner extends RetainedStoreIO<FileHandle> {
     });
   }
   async readOwned(path: string, cap: number, expected?: BigIntStats, optional = false): Promise<Uint8Array | undefined> {
-    return this.run('read', async () => {
+    const outcome = await this.readOwnedOutcome(path, cap, expected, optional);
+    return outcome.kind === 'missing' ? undefined : outcome.bytes;
+  }
+  async readOwnedOutcome(path: string, cap: number, expected?: BigIntStats, optional = false): Promise<StoreReadOutcome<Uint8Array>> {
+    return this.run<StoreReadOutcome<Uint8Array>>('read', async () => {
       const flags = ownedStoreReadFlags(constants);
       let pre: BigIntStats;
       try { pre = await lstat(path, { bigint: true }); }
-      catch (error) { if (optional && (error as NodeJS.ErrnoException).code === 'ENOENT') return undefined; throw error; }
+      catch (error) { if (optional && isInitialReadAbsence(error)) return { kind: 'missing', error }; throw error; }
       regular(pre, cap);
       if (expected && !sameIdentity(expected, pre)) throw new Error('store_read_identity');
       if (await realpath(path) !== resolve(path)) throw new Error('store_read_alias');
-      const file = this.capture(await open(path, flags));
-      // No fallible work between actual open fulfillment and capture.
-      const bytes = await this.use(file, 'read', async handle => {
+      return readStoreOpenOutcome(this, () => open(path, flags), async handle => {
         const before = await handle.stat({ bigint: true }); regular(before, cap);
         if (!sameIdentity(pre, before)) throw new Error('store_read_identity');
         return readBoundedStoreData(cap, {
@@ -245,8 +278,7 @@ export class StoreIOOwner extends RetainedStoreIO<FileHandle> {
             return sameIdentity(before, after) && sameIdentity(before, post) && await realpath(path) === resolve(path);
           },
         });
-      });
-      return bytes; // usable only AFTER the actual close fulfilled
+      }, optional); // present bytes are usable only AFTER the actual close fulfilled
     });
   }
   async readFixtureScenarios(): Promise<string> {
@@ -362,11 +394,16 @@ export class Store implements StateStore {
     return this.io.run('remove_media', async () => { this.assertWritable(); await rm(this.mediaPath(relative), { force: true }); });
   }
   readMedia(relative: string): Promise<Buffer> {
-    return this.io.run('read', async () => {
+    return this.readMediaOutcome(relative).then(storeReadValue);
+  }
+  readMediaOutcome(relative: string): Promise<StoreReadOutcome<Buffer>> {
+    return this.io.run<StoreReadOutcome<Buffer>>('read', async () => {
       this.assertWritable(); const path = this.mediaPath(relative);
-      if (this.io.checkpoint) return Buffer.from((await this.io.readOwned(path, this.io.checkpoint.mediaBytes))!);
-      const file = this.io.capture(await open(path, 'r'));
-      return this.io.use(file, 'read', handle => handle.readFile());
+      if (this.io.checkpoint) {
+        const outcome = await this.io.readOwnedOutcome(path, this.io.checkpoint.mediaBytes, undefined, true);
+        return outcome.kind === 'missing' ? outcome : { kind: 'present', bytes: Buffer.from(outcome.bytes) };
+      }
+      return readStoreOpenOutcome(this.io, () => open(path, 'r'), handle => handle.readFile());
     });
   }
   cleanStartupTmp(): Promise<void> {

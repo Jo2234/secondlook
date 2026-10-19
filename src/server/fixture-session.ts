@@ -4,7 +4,7 @@ import { EnvError } from './env.js';
 import type { AppEnv } from './env.js';
 import { createApp } from './app.js';
 import type { FixtureUiAssets } from './app.js';
-import { Store, StoreIOOwner, captureCheckpointStorePolicy } from './store.js';
+import { Store, StoreIOOwner, captureCheckpointStorePolicy, recoverStoreArtifact } from './store.js';
 import type { CheckpointStorePolicy } from './store.js';
 import { createNativeHttpOwner } from './native-http-owner.js';
 import { Runner } from './runner.js';
@@ -112,9 +112,7 @@ export function createFixtureSession(inputEnv: AppEnv, options: FixtureSessionOp
       await store.commit(() => recovery.state);
       await sweepExpired(store, Date.now());
       for (const image of store.snapshot().images) {
-        let missing = false;
-        try { missing = createHash('sha256').update(await store.readMedia(image.disclosedPath)).digest('hex') !== image.sha256; } catch { missing = true; }
-        if (missing && !image.artifactMissing) await store.commit(state => { state.images.find(i => i.id === image.id)!.artifactMissing = true; return state; });
+        await recoverStoreArtifact(store, image, await store.readMediaOutcome(image.disclosedPath));
       }
       if (!store.snapshot().photos.some(p => p.source === 'synthetic' && p.role === 'model')) {
         const input = modelFront ?? await readFile('assets/demo/model-front.png'), { photo } = await analyzePhoto(input), photoId = newId(), path = `photos/${photoId}.jpg`;
