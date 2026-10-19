@@ -73,8 +73,8 @@ export function createHttpClient(options: { apiKey: string; baseUrl: string; tra
     async featureCost(call) {
       const skus: z.infer<typeof skuSchema>[] = [], seen = new Set<string>(); let token: string | null = null;
       for (let page = 0; page < PREFLIGHT_MAX_PAGES; page++) {
-        const query = new URLSearchParams({ page_size: String(PREFLIGHT_PAGE_SIZE), ...(token === null ? {} : { starting_token: token }) });
-        const response = await read(`/s2s/v2.0/credit/feature-cost?${query}`, costSchema, call);
+        const query: URLSearchParams = new URLSearchParams({ page_size: String(PREFLIGHT_PAGE_SIZE), ...(token === null ? {} : { starting_token: token }) });
+        const response: z.infer<typeof costSchema> = await read(`/s2s/v2.0/credit/feature-cost?${query}`, costSchema, call);
         skus.push(...response.result.skus); token = response.result.next_token;
         if (token === null) return skus;
         if (seen.has(token)) throw new YouCamError('parse', { errorCode: 'cost_ambiguous' });
