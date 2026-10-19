@@ -10,6 +10,10 @@ export interface HttpLifetimeOptions {
   armDeadline(): void;
   joinStartup(): Promise<void>;
   joinRunner(): Promise<void>;
+  /** Independent retained policy/IO join, even if any ordinary join already rejected.
+   * Must not await this lifetime/stop task or depend on Store.close.
+   */
+  joinRetained?(): Promise<void>;
   dispose(): void;
   closeStore(): Promise<void>;
   clearDeadline(): void;
@@ -21,6 +25,7 @@ export class HttpLifetime {
   private readonly requests = new Set<OwnedRequest>();
   private failed = false;
   private failure: unknown;
+  private readonly faults: unknown[] = [];
   private listener: HttpListener | undefined;
   private unsubscribe: (() => void) | undefined;
   private listenerClosed = false;
@@ -35,7 +40,7 @@ export class HttpLifetime {
   constructor(private readonly options: HttpLifetimeOptions) {}
   status() {
     return { accepting: this.accepting, requests: this.requests.size, failed: this.failed,
-      failure: this.failure, listenerReady: this.listenerReady, listenerClosed: this.listenerClosed };
+      failure: this.failure, faults: this.faults.length, listenerReady: this.listenerReady, listenerClosed: this.listenerClosed };
   }
   /** Register before invoking work. The returned promise itself is observed and retained.
    * Neither a disconnected caller nor its AbortSignal can release this ownership record.
@@ -63,6 +68,7 @@ export class HttpLifetime {
     });
   }
   private remember(error: unknown): void {
+    this.faults.push(error);
     if (!this.failed) { this.failed = true; this.failure = error; }
   }
   fail(error: unknown): Promise<void> { this.remember(error); return this.stop(); }
@@ -102,6 +108,8 @@ export class HttpLifetime {
       observe(startup.then(this.options.joinRunner, this.options.joinRunner)),
     ]);
     for (const result of joins) if (result.status === 'rejected') this.remember(result.reason);
+    // Not inside closeStore: failure deliberately skips that positive ownership release.
+    try { await this.options.joinRetained?.(); } catch (error) { this.remember(error); }
     try { this.options.dispose(); } catch (error) { this.remember(error); }
     // Zero physical work never erases failed/unknown ownership or permits lock release.
     if (!this.failed) {
