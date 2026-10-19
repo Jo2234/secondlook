@@ -90,6 +90,15 @@ export class Runner {
         effects = applyEvent(state, state.jobs.find(j => j.id === id)!, event); return state;
       }); return effects;
     };
+    // bounded joins actual work but its stopped outcome can mask that work's rejection.
+    // The wrapper distinguishes no fault from a rejection whose value is undefined.
+    let retainedFault: { error: unknown } | undefined;
+    const retainFault = (error: unknown): void => {
+      if (!retainedFault) retainedFault = { error };
+      else if (!Object.is(retainedFault.error, error)) retainedFault = {
+        error: new AggregateError([retainedFault.error, error], 'runner_finalization_failed'),
+      };
+    };
     try {
       const deadline = Math.min(Date.parse(batch.deadlineAt), initial.attempts.at(-1)!.attemptDeadlineAt ? Date.parse(initial.attempts.at(-1)!.attemptDeadlineAt!) : clock.now() + attemptDeadlineMs(this.options.taskDeadlineMs));
       if (clock.now() >= deadline) { await sendEvent({ type: 'attempt_deadline' }); return; }
@@ -242,13 +251,25 @@ export class Runner {
                   });
                   published = settled.jobs.find(j => j.id === id)?.resultImageId === image.id;
                 } catch (error) {
+                  const expectedStop = error instanceof YouCamError && (error.kind === 'aborted' || error.kind === 'timeout');
+                  if (!expectedStop) retainFault(error);
                   try { await cleanUnpublished(); }
                   catch (cleanupError) {
-                    if (cleanupError !== error) throw new AggregateError([error, cleanupError], 'publication_cleanup_failed');
+                    const combined = new AggregateError([error, cleanupError], 'publication_cleanup_failed');
+                    // Preserve BOTH caught values, even equal/undefined values, before bounded
+                    // can discard this rejection. The first publication fault stays first.
+                    if (!retainedFault || Object.is(retainedFault.error, error)) retainedFault = { error: combined };
+                    else retainFault(combined);
+                    throw combined;
                   }
                   throw error;
                 }
-                if (!published) await cleanUnpublished();
+                if (!published) {
+                  // A known durable deadline outcome is not publication. Its cleanup failure
+                  // must also survive a concurrent outer timeout/cancellation outcome.
+                  try { await cleanUnpublished(); }
+                  catch (cleanupError) { retainFault(cleanupError); throw cleanupError; }
+                }
               } catch (error) { store.assertWritable(); if (signal.aborted || !(error instanceof YouCamError)) throw error; next = await sendEvent({ type: 'download_failed', expired: error.http === 403 || error.http === 410 }); }
             }
           }
@@ -257,10 +278,18 @@ export class Runner {
         if (!isTerminal(current().attempts.at(-1)!)) await sendEvent({ type: 'attempt_deadline' });
       }, clock);
     } catch (error) {
-      store.assertWritable();
-      if (parent.aborted) await sendEvent({ type: 'cancel' });
-      else await sendEvent({ type: 'attempt_deadline' });
-      if (!(error instanceof YouCamError) && !(error instanceof Error && error.message === 'aborted')) throw error;
-    } finally { this.controllers.delete(id); await store.cleanTmp(id); }
+      if (!(error instanceof YouCamError) && !(error instanceof Error && error.message === 'aborted')) retainFault(error);
+      try {
+        store.assertWritable();
+        if (parent.aborted) await sendEvent({ type: 'cancel' });
+        else await sendEvent({ type: 'attempt_deadline' });
+      } catch (settlementError) { retainFault(settlementError); }
+    } finally {
+      this.controllers.delete(id);
+      try { await store.cleanTmp(id); } catch (cleanupError) { retainFault(cleanupError); }
+      // bounded has joined actual publication/cleanup before this boundary. A later tmp
+      // failure cannot erase the retained publication fault or make drain falsely clean.
+      if (retainedFault) throw retainedFault.error;
+    }
   }
 }

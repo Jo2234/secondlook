@@ -173,3 +173,135 @@ test('DRAFT publication: cancel during controlled download retains observed task
 test('DRAFT publication: cancel during controlled disclosure publishes no references', async () => checkpoint('disclose'), 20_000);
 test('DRAFT publication: cancel after own media sync removes only the unpublished file', async () => checkpoint('written'), 20_000);
 test('DRAFT publication: abort after Store callback chooses publication returns durable success', async () => checkpoint('selected'), 20_000);
+
+// DRAFT_UNRUN. Expected execution failure is evidence to retain, never a clean Store close.
+test('DRAFT publication cleanup fault: cancelled owned media rejection fences after actual join', async () => {
+  const root = process.env.YOUCAM_INT_DATA_DIR;
+  if (!root || !root.endsWith('/data')) throw new Error('exact owned data namespace required');
+  const directory = `${root}/publication-cleanup-fault/data`;
+  await expect(access(directory)).rejects.toMatchObject({ code: 'ENOENT' });
+  const store = await Store.acquire(directory), signal = new AbortController(), limiter = new SlidingLogLimiter(systemClock);
+  const written = deferred(), releaseWrite = deferred(), removing = deferred(), rejectRemoval = deferred();
+  const cleanupError = new Error('controlled_exact_owned_removeMedia_rejection');
+  let imageId: string | undefined, imagePath: string | undefined, outputBytes: Uint8Array | undefined;
+  let modelBytes: Uint8Array = new Uint8Array(), jobId: string | undefined;
+  let publicationFailure: { error: unknown } | undefined, executionFailure: { error: unknown } | undefined;
+  let removalCalls = 0, tmpJoined = false, drainSettled = false, failed = false, failure: unknown;
+  const remember = (error: unknown) => { if (!failed) { failed = true; failure = error; } };
+  const clients: PublicationClient[] = [];
+  const runner = new Runner({ store, limiter, signal: signal.signal, taskDeadlineMs: 60_000, clock: systemClock,
+    client: () => { const client = new PublicationClient({ now: systemClock.now, result: async () => modelBytes }); clients.push(client); return client; },
+    disclose: async (bytes, job, workSignal) => {
+      const output = await discloseImage(bytes, job.mode, workSignal); outputBytes = output.bytes;
+      imageId = randomUUID().replaceAll('-', '').slice(0, 20); imagePath = `generated/${imageId}.jpg`;
+      return { ...output, id: imageId, disclosedPath: imagePath, jobId: job.id, listingId: job.listingId, buyerSessionId: null,
+        mode: job.mode, label: 'demo_fixture', artifactMissing: false, createdAt: new Date().toISOString(), expiresAt: null };
+    },
+  });
+  const originalWrite = store.writeMedia.bind(store), originalCommit = store.commit.bind(store);
+  const originalRemove = store.removeMedia.bind(store), originalTmp = store.cleanTmp.bind(store);
+  store.writeMedia = async (path, bytes) => {
+    await originalWrite(path, bytes);
+    if (path === imagePath) { written.resolve(); await releaseWrite.promise; }
+  };
+  store.commit = change => originalCommit(state => {
+    try { return change(state); }
+    catch (error) { if (imagePath && !publicationFailure) publicationFailure = { error }; throw error; }
+  });
+  store.removeMedia = async path => {
+    if (path !== imagePath) return originalRemove(path);
+    removalCalls++; removing.resolve(); await rejectRemoval.promise; throw cleanupError;
+  };
+  store.cleanTmp = async id => { await originalTmp(id); tmpJoined = true; };
+  // Observe/rethrow the SAME real run rejection into the existing OwnedRuntime callback.
+  // No production observer/API or replacement Runner/Store/persistence success is introduced.
+  const originalRun = runner['run'].bind(runner);
+  runner['run'] = async (id, batchSignal) => {
+    try { await originalRun(id, batchSignal); }
+    catch (error) { executionFailure = { error }; throw error; }
+  };
+  let drain: Promise<{ ok: true } | { ok: false; error: unknown }> | undefined;
+  try {
+    const photo = await normalizePhoto(await readFile('assets/demo/model-front.png')); modelBytes = photo.data;
+    const modelId = 'b'.repeat(20), modelPath = `photos/${modelId}.jpg`;
+    await store.writeMedia(modelPath, photo.data);
+    const model: StoredPhoto = { id: modelId, role: 'model', mode: 'fixture', source: 'synthetic', rightsId: null,
+      original: photo.original, normalized: { ...photo.normalized, path: modelPath }, createdAt: new Date().toISOString(), expiresAt: null };
+    await store.commit(state => { state.photos.push(model); return state; });
+    const app = createApp(parseEnv({ DATA_DIR: directory }), { store, runner, signal: signal.signal });
+    const json = (body: unknown) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const upload = new FormData(); upload.set('role', 'garment');
+    upload.set('file', new File([new Uint8Array(await readFile('assets/demo/tee.png'))], 'synthetic-tee.png', { type: 'image/png' }));
+    const uploaded = await app.request('/api/photos', { method: 'POST', body: upload }); expect(uploaded.status).toBe(200);
+    const { photo: garment } = await uploaded.json();
+    const declaration = { photoType: 'hanger', category: 'upper_body', singleGarment: true, frontFacing: true, notComposite: true, fullyVisible: true, noPeopleInPhoto: true };
+    const evaluated = await app.request(`/api/photos/${garment.id}/evaluate`, json({ declaration }));
+    expect(evaluated.status).toBe(200); expect((await evaluated.json()).spendAllowed).toBe(true);
+    const listingResponse = await app.request('/api/listings', json({ title: 'Synthetic cleanup fault checkpoint', conditionNotes: '', priceText: null,
+      garmentPhotoIds: [garment.id], declaration, measurements: { category: 'upper_body', valuesMm: { pit_to_pit: 520, length: 680, shoulder: 450, sleeve: 'na' }, enteredUnit: 'cm', tagSize: null } }));
+    expect(listingResponse.status).toBe(200); const listing = await listingResponse.json(); expect(listing.readiness.ready).toBe(true);
+    const body = { requestId: randomUUID(), garmentPhotoId: garment.id, modelPhotoIds: [modelId], confirmCostCu: 0 };
+    const admission = await app.request(`/api/listings/${listing.id}/tryon`, json(body)); expect(admission.status).toBe(200);
+    const admitted = await admission.json(); expect(admitted.jobs).toHaveLength(1); jobId = admitted.jobs[0].id;
+    drain = runner.drain().then(() => { drainSettled = true; return { ok: true as const }; }, error => { drainSettled = true; return { ok: false as const, error: error as unknown }; });
+    const premature = drain.then(() => { throw new Error('cleanup_fault_boundary_not_reached'); });
+    await Promise.race([written.promise, premature]);
+    expect(await store.readMedia(imagePath!)).toEqual(outputBytes);
+    const cancelled = await app.request(`/api/jobs/${jobId}/cancel`, json({})); expect(cancelled.status).toBe(200);
+    const response = await cancelled.json() as TryOnJob; expect(response.attempts.at(-1)!.state).toBe('cancelled');
+    const before = store.snapshot(), durableBefore = await readFile(`${directory}/state.json`);
+    releaseWrite.resolve(); await Promise.race([removing.promise, premature]);
+    expect(removalCalls).toBe(1); expect(drainSettled).toBe(false); expect(executionFailure).toBeUndefined(); expect(tmpJoined).toBe(false);
+    expect(runner.status()).toMatchObject({ owned: 1, fence: null });
+    rejectRemoval.resolve();
+    const outcome = await drain;
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) throw new Error('cleanup_fault_drain_falsely_clean');
+    expect(outcome.error).toMatchObject({ code: 'runner_fenced' });
+    expect(tmpJoined).toBe(true); expect(runner.status()).toEqual({ stopped: true, owned: 0, fence: { phase: 'execution', jobIds: [jobId] } });
+    expect(publicationFailure?.error).toMatchObject({ name: 'YouCamError', kind: 'aborted' });
+    expect(executionFailure?.error).toBeInstanceOf(AggregateError);
+    expect((executionFailure!.error as AggregateError).errors).toEqual([publicationFailure!.error, cleanupError]);
+    expect((executionFailure!.error as AggregateError).errors[0]).toBe(publicationFailure!.error);
+    expect((executionFailure!.error as AggregateError).errors[1]).toBe(cleanupError);
+    expect(() => runner.assertAdmissionOpen()).toThrow('runner_fenced');
+    let admissionCalled = false;
+    await expect(runner.admit(async () => { admissionCalled = true; return { value: undefined, jobIds: [], replay: false }; }, () => false)).rejects.toMatchObject({ code: 'runner_fenced' });
+    expect(admissionCalled).toBe(false); await expect(runner.drain()).rejects.toMatchObject({ code: 'runner_fenced' });
+    const state = store.snapshot(), job = state.jobs.find(item => item.id === jobId)!;
+    expect(state).toEqual(before); expect(job).toEqual(response); expect(job.attempts).toHaveLength(1);
+    expect(job.attempts[0]).toMatchObject({ state: 'cancelled', taskId: 'fixture-task-1', postCount: 1, getCount: 1 });
+    expect(state.jobs).toHaveLength(1); expect(state.requests).toHaveLength(1); expect(state.requests[0]!.jobIds).toEqual([jobId]);
+    expect(state.ledger).toHaveLength(1); expect(state.ledger[0]).toMatchObject({ jobId, attempt: 1, state: 'possibly_spent', cu: 0, id: job.attempts[0]!.ledgerEntryId });
+    expect(committedCu(state.ledger)).toBe(0); expect(clients).toHaveLength(1);
+    expect(clients[0]!.counts).toEqual({ posts: 1, gets: 1, files: 2, downloads: 1 });
+    expect(state.images).toEqual([]); expect(job.resultImageId).toBeNull(); expect(state.listings[0]!.tryOnResultIds).toEqual([]);
+    expect(state.listings[0]!.garmentPhotoIds).toEqual([garment.id]); expect(state.buyers).toEqual([]);
+    expect((await app.request(`/media/${imageId}`)).status).toBe(404);
+    expect(await store.readMedia(imagePath!)).toEqual(outputBytes); expect(removalCalls).toBe(1);
+    expect(await store.readMedia(modelPath)).toEqual(photo.data); expect((await store.readMedia(garment.normalized.path)).length).toBeGreaterThan(0);
+    expect(await readFile(`${directory}/state.json`)).toEqual(durableBefore);
+    expect(JSON.parse(durableBefore.toString('utf8'))).toEqual(state);
+    store.assertWritable(); await access(`${directory}/.owner.lock`);
+  } catch (error) { remember(error); }
+  finally {
+    releaseWrite.resolve(); rejectRemoval.resolve();
+    try { runner.stopAdmission(); } catch (error) { remember(error); }
+    try { signal.abort(); } catch (error) { remember(error); }
+    // A rejected drain is a complete join ONLY with this exact sticky fence and owned=0:
+    // OwnedRuntime.drain waits every batch.done before throwing; release follows run/finally.
+    // Any other rejection/status is unknown and remains a failure. Never close/remove here.
+    try {
+      await runner.drain(); remember(new Error('expected_cleanup_fault_fence_missing'));
+    } catch (error) {
+      const status = runner.status();
+      if (!(error instanceof Error) || error.message !== 'runner_fenced' || status.owned !== 0
+        || status.fence?.phase !== 'execution' || status.fence.jobIds.length !== 1 || status.fence.jobIds[0] !== jobId
+        || !tmpJoined || !executionFailure) remember(error);
+    }
+    try { limiter.dispose(); } catch (error) { remember(error); }
+    // This deliberately faulted namespace, exact unpublished file and Store lock survive
+    // even when every assertion succeeds. No rm, Store.close or recovery authority.
+  }
+  if (failed) throw failure;
+}, 20_000);
