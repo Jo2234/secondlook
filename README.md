@@ -4,6 +4,8 @@ A private scaffold for a thrift-listing workflow: original garment photos, flat 
 
 Implementation status: dependencies installed with scripts disabled under a closed master grant. Typecheck and 21 tests in the error, job-machine and ledger unit files passed. Other pure tests, synthetic fixture rendering and application runtime checks remain pending. Live integration is planned and unverified. This is not a final contest pass.
 
+S1 image source candidate adds pure pixel metrics and area averaging, bounded JPEG normalization, and synthetic calibration contracts. A first targeted run passed 12 new numeric/policy tests. After a calibration metadata correction, 13 tests reported passes and the typecheck exited 0, but process supervision stopped with an audit requirement; these are qualified results, not final governed acceptance. Native image rendering, EXIF checks and measured calibration are still unrun. See [calibration scope](docs/calibration.md).
+
 ## Fixture-mode quick start (after granted installation and implementation)
 
 Use Node ≥24 and pnpm 12.11.2. Installation, fixture rendering and a dev session each require their own workflow grant. Once granted, use `pnpm install --frozen-lockfile --ignore-scripts`, `pnpm fixtures:generate`, and `pnpm dev:fixture`. The UI lands in S3; the current scaffold provides only `/api/health` on 127.0.0.1:5194. Vite uses 127.0.0.1:5195.

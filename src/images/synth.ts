@@ -1,9 +1,8 @@
-import sharp from 'sharp';
+import { sharp, withImageDecode } from './native.js';
+import { CALIBRATION_BLURS, CALIBRATION_EXPOSURES } from '../domain/quality/calibration.js';
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-sharp.concurrency(1);
-sharp.cache(false);
 export const SYNTH_VERSION = 'synth1-2026-10-19';
 export type SyntheticKind = 'model-front' | 'tee' | 'jacket' | 'dress' | 'trousers';
 export const SYNTHETIC_KINDS: readonly SyntheticKind[] = ['model-front', 'tee', 'jacket', 'dress', 'trousers'];
@@ -19,7 +18,7 @@ export function syntheticSvg(kind: SyntheticKind): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="768" height="1024" viewBox="0 0 768 1024"><defs><pattern id="weave" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#54759c"/><path d="M0 0 L12 12 M-6 6 L6 18 M6 -6 L18 6" stroke="#b0c1d6" stroke-width="3"/></pattern></defs><rect width="768" height="1024" fill="#b6b4af"/><g fill="url(#weave)" stroke="#37495f" stroke-width="5">${garment}</g><rect x="18" y="966" width="250" height="44" rx="4" fill="#354252"/><text x="36" y="998" font-family="sans-serif" font-size="30" font-weight="bold" fill="#f4e7a7">DEMO</text></svg>`;
 }
 export async function renderSynthetic(kind: SyntheticKind): Promise<Buffer> {
-  return sharp(Buffer.from(syntheticSvg(kind))).png({ compressionLevel: 9, adaptiveFiltering: false, palette: false }).toBuffer();
+  return withImageDecode(() => sharp(Buffer.from(syntheticSvg(kind))).png({ compressionLevel: 9, adaptiveFiltering: false, palette: false }).toBuffer());
 }
 export async function writeSyntheticFixtures(directory: string): Promise<string> {
   await mkdir(directory, { recursive: true });
@@ -38,9 +37,11 @@ export async function writeSyntheticFixtures(directory: string): Promise<string>
 export async function writeCalibrationVariants(directory: string): Promise<void> {
   await mkdir(directory, { recursive: true });
   const base = await renderSynthetic('tee');
-  for (const sigma of [0, 1, 2, 4, 8]) {
-    const pipeline = sharp(base);
-    await (sigma === 0 ? pipeline : pipeline.blur(sigma)).png().toFile(join(directory, `blur-${sigma}.png`));
+  for (const sigma of CALIBRATION_BLURS) {
+    await withImageDecode(async () => {
+      const pipeline = sharp(base);
+      await (sigma === 0 ? pipeline : pipeline.blur(sigma)).png().toFile(join(directory, `blur-${sigma}.png`));
+    });
   }
-  for (const scale of [0.2, 0.5, 1, 1.5, 3]) await sharp(base).linear(scale, 0).png().toFile(join(directory, `exposure-${scale}.png`));
+  for (const scale of CALIBRATION_EXPOSURES) await withImageDecode(async () => { await sharp(base).linear(scale, 0).png().toFile(join(directory, `exposure-${scale}.png`)); });
 }
