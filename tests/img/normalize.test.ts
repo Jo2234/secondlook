@@ -17,8 +17,11 @@ test('F17 autorotates pixels and strips synthetic GPS/EXIF/XMP metadata', async 
   expect(photo.original).toMatchObject({ width: 80, height: 40, format: 'jpeg', bytes: input.length });
   expect(metadata).toMatchObject({ format: 'jpeg', width: 40, height: 80, space: 'srgb' });
   for (const key of ['exif', 'xmp', 'iptc', 'icc', 'orientation'] as const) expect(metadata[key]).toBeUndefined();
-  const top = await sharp(photo.data).extract({ left: 10, top: 10, width: 10, height: 10 }).stats();
-  const bottom = await sharp(photo.data).extract({ left: 10, top: 60, width: 10, height: 10 }).stats();
+  // stats() reads its input, so materialize each crop losslessly before measuring it.
+  const topPixels = await sharp(photo.data).extract({ left: 10, top: 10, width: 10, height: 10 }).png().toBuffer();
+  const bottomPixels = await sharp(photo.data).extract({ left: 10, top: 60, width: 10, height: 10 }).png().toBuffer();
+  const top = await sharp(topPixels).stats();
+  const bottom = await sharp(bottomPixels).stats();
   expect(top.channels[0]!.mean).toBeGreaterThan(top.channels[2]!.mean + 150);
   expect(bottom.channels[2]!.mean).toBeGreaterThan(bottom.channels[0]!.mean + 150);
 });
