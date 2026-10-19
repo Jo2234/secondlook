@@ -8,6 +8,7 @@ import { bounded, checkSignal, systemClock } from '../youcam/operations.js';
 import type { Clock } from '../youcam/operations.js';
 import { DOWNLOAD_PHASE_MS, DOWNLOAD_TIMEOUT_MS, FILE_POST_TIMEOUT_MS, GET_TIMEOUT_MS, MAX_SLOT_REFRESHES, MAX_UPLOAD_TRIES, PUT_TIMEOUT_MS, UPLOAD_PHASE_MS, attemptDeadlineMs } from '../youcam/limits.js';
 import { markPostCommitment } from '../youcam/workflow-state.js';
+import type { WorkflowState } from '../youcam/workflow-state.js';
 import type { SlidingLogLimiter } from '../youcam/rate-limiter.js';
 import type { Store } from './store.js';
 import { OwnedRuntime, RuntimeRefused } from './owned-runtime.js';
@@ -69,19 +70,24 @@ export class Runner {
         || downloadStart && ['task_get', 'download'].includes(kind) && time >= Date.parse(downloadStart.at) + DOWNLOAD_PHASE_MS) throw new YouCamError('timeout');
       if (recovery && !['task_get', 'download'].includes(kind)) throw new Error('unsafe_resume');
     };
+    // The publication path uses this same reducer/effect interpreter inside its own commit.
+    const applyEvent = (state: WorkflowState, job: TryOnJob, event: Event): Effect[] => {
+      const a = job.attempts.at(-1)!;
+      if (isTerminal(a)) return [];
+      const result = step(a, event, now(), { taskDeadlineMs: this.options.taskDeadlineMs, batchDeadlineAt: batch.deadlineAt });
+      job.attempts[job.attempts.length - 1] = result.attempt; const effects = result.effects;
+      if (event.type === 'limiter_granted' && event.request === 'task_post' && effects.some(e => e.type === 'request')) markPostCommitment(state, id, now());
+      for (const effect of effects) if (effect.type === 'settle') {
+        const entry = state.ledger.find(e => e.id === result.attempt.ledgerEntryId);
+        if (!entry || entry.state === 'spent' || entry.state === 'released') continue;
+        entry.state = effect.state; entry.settledAt = now(); entry.settledSeq = state.seq + 1; entry.reason = result.attempt.error?.code ?? result.attempt.state;
+      }
+      return effects;
+    };
     const sendEvent = async (event: Event): Promise<Effect[]> => {
       let effects: Effect[] = [];
       await store.commit(state => {
-        const job = state.jobs.find(j => j.id === id)!, a = job.attempts.at(-1)!;
-        const result = step(a, event, now(), { taskDeadlineMs: this.options.taskDeadlineMs, batchDeadlineAt: batch.deadlineAt });
-        job.attempts[job.attempts.length - 1] = result.attempt; effects = result.effects;
-        if (event.type === 'limiter_granted' && event.request === 'task_post' && effects.some(e => e.type === 'request')) markPostCommitment(state, id, now());
-        for (const effect of effects) if (effect.type === 'settle') {
-          const entry = state.ledger.find(e => e.id === result.attempt.ledgerEntryId);
-          if (!entry || entry.state === 'spent' || entry.state === 'released') continue;
-          entry.state = effect.state; entry.settledAt = now(); entry.settledSeq = state.seq + 1; entry.reason = result.attempt.error?.code ?? result.attempt.state;
-        }
-        return state;
+        effects = applyEvent(state, state.jobs.find(j => j.id === id)!, event); return state;
       }); return effects;
     };
     try {
@@ -175,14 +181,74 @@ export class Runner {
                 const bytes = await bounded(signal, DOWNLOAD_TIMEOUT_MS, s => { requestAllowed(s, 'download'); return client.download(resultUrl!, { signal: s }); }, clock);
                 const disclosed = await this.options.disclose(bytes, job, signal); checkSignal(signal);
                 const { bytes: output, ...image } = disclosed;
-                await store.writeMedia(image.disclosedPath, output); checkSignal(signal);
-                await store.commit(state => {
-                  state.images.push({ ...image, sha256: createHash('sha256').update(output).digest('hex') });
-                  const stored = state.jobs.find(j => j.id === id)!; stored.resultImageId = image.id;
-                  const listing = state.listings.find(l => l.id === job.listingId); if (listing) listing.tryOnResultIds.push(image.id);
-                  return state;
-                });
-                next = await sendEvent({ type: 'downloaded' });
+                // Only a fulfilled wx/write/sync/close/directory-sync proves ownership of this file.
+                // A partial write failure retains its exact path; it must not delete an EEXIST file.
+                await store.writeMedia(image.disclosedPath, output);
+                const cleanUnpublished = async (): Promise<void> => {
+                  // Unknown/not-committed Store failures both fence this owner. Never use stale memory
+                  // to delete a file whose publication may have renamed onto canonical state.
+                  await store.commit(state => {
+                    if (state.images.some(i => i.id === image.id || i.disclosedPath === image.disclosedPath)
+                      || state.photos.some(p => p.id === image.id || p.normalized.path === image.disclosedPath)
+                      || state.jobs.some(j => j.resultImageId === image.id)
+                      || state.listings.some(l => l.tryOnResultIds.includes(image.id) || l.garmentPhotoIds.includes(image.id))
+                      || state.buyers.some(b => b.imageIds.includes(image.id))) throw new Error('publication_media_referenced');
+                    return state;
+                  });
+                  store.assertWritable();
+                  await store.removeMedia(image.disclosedPath);
+                };
+                let published = false;
+                try {
+                  const settled = await store.commit(state => {
+                    // This synchronous callback is the cancellation/publication linearization point.
+                    // A later abort cannot undo a chosen publication while its fsync is awaited.
+                    checkSignal(signal); store.assertWritable();
+                    if (this.runtime.status().fence) throw new Error('runner_fenced');
+                    const matches = state.jobs.filter(j => j.id === id), stored = matches[0], active = stored?.attempts.at(-1);
+                    if (matches.length !== 1 || !stored || !active || stored.requestId !== job.requestId
+                      || stored.mode !== job.mode || stored.listingId !== job.listingId || stored.buyerSessionId !== job.buyerSessionId
+                      || stored.garmentPhotoId !== job.garmentPhotoId || stored.modelPhotoId !== job.modelPhotoId
+                      || stored.category !== job.category || stored.createdAt !== job.createdAt
+                      || stored.request.garment_category !== job.request.garment_category
+                      || stored.request.change_shoes !== job.request.change_shoes || stored.request.filter_multi_person !== job.request.filter_multi_person
+                      || stored.attempts.length !== job.attempts.length || active.n !== a.n || active.ledgerEntryId !== a.ledgerEntryId
+                      || active.taskId !== a.taskId || active.postSendStartedAt !== a.postSendStartedAt) throw new Error('publication_identity_changed');
+                    if (isTerminal(active)) throw new YouCamError('aborted');
+                    const entries = state.ledger.filter(e => e.id === active.ledgerEntryId), entry = entries[0];
+                    if (entries.length !== 1 || !entry || entry.jobId !== id || entry.attempt !== active.n || entry.mode !== stored.mode
+                      || entry.state === 'spent' || entry.state === 'released') throw new Error('publication_ledger_inconsistent');
+                    const listings = state.listings.filter(l => l.id === stored.listingId), listing = listings[0];
+                    if (stored.listingId !== null && (listings.length !== 1 || !listing || listing.mode !== stored.mode)
+                      || stored.buyerSessionId !== null) throw new Error('publication_owner_missing');
+                    if (image.jobId !== id || image.mode !== stored.mode || image.listingId !== stored.listingId || image.buyerSessionId !== stored.buyerSessionId
+                      || image.artifactMissing || stored.resultImageId !== null
+                      || state.images.some(i => i.id === image.id || i.disclosedPath === image.disclosedPath)
+                      || state.photos.some(p => p.id === image.id || p.normalized.path === image.disclosedPath)
+                      || state.jobs.some(j => j.resultImageId === image.id)
+                      || state.listings.some(l => l.tryOnResultIds.includes(image.id) || l.garmentPhotoIds.includes(image.id))
+                      || state.buyers.some(b => b.imageIds.includes(image.id))) throw new Error('publication_image_conflict');
+                    next = applyEvent(state, stored, { type: 'downloaded' });
+                    // Deadlines and active download intent belong to step(), not a second status machine.
+                    if (stored.attempts.at(-1)!.state !== 'succeeded') {
+                      if (!isTerminal(stored.attempts.at(-1)!)) throw new Error('publication_transition_refused');
+                      return state;
+                    }
+                    if (!next.some(e => e.type === 'settle' && e.state === 'spent')
+                      || state.ledger.find(e => e.id === active.ledgerEntryId)?.state !== 'spent') throw new Error('publication_settlement_missing');
+                    state.images.push({ ...image, sha256: createHash('sha256').update(output).digest('hex') });
+                    stored.resultImageId = image.id; if (listing) listing.tryOnResultIds.push(image.id);
+                    return state;
+                  });
+                  published = settled.jobs.find(j => j.id === id)?.resultImageId === image.id;
+                } catch (error) {
+                  try { await cleanUnpublished(); }
+                  catch (cleanupError) {
+                    if (cleanupError !== error) throw new AggregateError([error, cleanupError], 'publication_cleanup_failed');
+                  }
+                  throw error;
+                }
+                if (!published) await cleanUnpublished();
               } catch (error) { store.assertWritable(); if (signal.aborted || !(error instanceof YouCamError)) throw error; next = await sendEvent({ type: 'download_failed', expired: error.http === 403 || error.http === 410 }); }
             }
           }

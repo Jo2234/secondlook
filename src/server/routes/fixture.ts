@@ -1,6 +1,6 @@
 import type { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { createAttempt, step } from '../../domain/job-machine.js';
+import { createAttempt, isTerminal, step } from '../../domain/job-machine.js';
 import { admit, balanceEstimateCu, committedCu } from '../../domain/ledger.js';
 import { capability, capabilityAllows } from '../../domain/capabilities.js';
 import { readiness, validateOriginalIds } from '../../domain/listing.js';
@@ -160,6 +160,10 @@ export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void 
     runner.cancel(jobId);
     const state = await store.commit(state => {
       const job = state.jobs.find(j => j.id === jobId); if (!job) throw new RouteError('not_found', 404);
+      // Publication and cancel choose their outcome under the same Store serialization. If
+      // publication already won (even while fsync was pending), return that durable success.
+      // Repeated terminal cancels are byte-idempotent, including history/ledger/sequence.
+      if (isTerminal(job.attempts.at(-1)!)) return state;
       const result = step(job.attempts.at(-1)!, { type: 'cancel' }, now()); job.attempts[job.attempts.length - 1] = result.attempt;
       for (const effect of result.effects) if (effect.type === 'settle') { const entry = state.ledger.find(e => e.id === result.attempt.ledgerEntryId); if (entry && entry.state !== 'spent' && entry.state !== 'released') { entry.state = effect.state; entry.settledAt = now(); entry.settledSeq = state.seq + 1; entry.reason = 'cancel'; } }
       return state;
