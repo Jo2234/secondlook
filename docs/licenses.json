@@ -1,0 +1,6 @@
+{
+  "status": "pending-G-install",
+  "lockfileSha256": null,
+  "packages": [],
+  "reason": "No lockfile exists and no dependency installation or registry resolution is authorized yet."
+}
