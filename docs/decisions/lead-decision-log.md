@@ -15,3 +15,5 @@
 | D11 | 19 Oct 2026 | Balance observation fence, fail-closed owner lock with explicit unlock, no post-deadline requests, absorbing succeeded + separate artifact read recovery | Master follow-up consistency items |
 | D12 | 19 Oct 2026 | Use `node:https` (not fetch) for live calls so DNS goes through the policy lookup | Avoids a TOCTOU gap in private-address refusal without adding an HTTP dependency |
 | D13 | 19 Oct 2026 | Omit the data:unlock executable; stale-lock recovery is quiescent manual only; F40 inventories lock mutations | Master R1 follow-up: an unlock rename races a new starter |
+| D14 | 19 Oct 2026 | Same lead switches to GPT-6 Astra HIGH after current Claude usage_limit; original Opus authorship and Sol slot1 retained | User-authorized quota fallback, not final judging pass |
+| D15 | 19 Oct 2026 | R2 accepted: explicit documented error coverage; product-copy scan scope; F25 proven-unsent release; F29 fence wording | Master disposition at ca6ea2f; normative plan v1.2. D7 pre-send retry wording was superseded by D10/§5.3; D11 unlock wording was superseded by D13. No automatic task POST retry except received 429. |
