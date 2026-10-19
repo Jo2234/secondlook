@@ -6,7 +6,7 @@ import { createApp } from './app.js';
 import { Store, StoreLocked } from './store.js';
 import { Runner } from './runner.js';
 import { newId } from './routes/fixture.js';
-import { FixtureClient } from '../youcam/fixture-client.js';
+import { FixtureClient, FIXTURE_SCENARIOS, scenarioForHash } from '../youcam/fixture-client.js';
 import { SlidingLogLimiter } from '../youcam/rate-limiter.js';
 import { systemClock } from '../youcam/operations.js';
 import { recoverState } from '../youcam/workflow-state.js';
@@ -14,6 +14,7 @@ import { SHUTDOWN_MS } from '../youcam/limits.js';
 import { analyzePhoto } from '../images/raster.js';
 import { discloseImage, fixtureComposite } from '../images/disclose.js';
 import { sweepExpired } from './ttl-sweeper.js';
+import type { FixtureScenario } from '../youcam/fixture-client.js';
 import type { StoredPhoto } from '../shared/types.js';
 async function main(): Promise<void> {
   const env = loadEnv(); // Missing live key still exits 2 before store/listener/native work.
@@ -48,8 +49,15 @@ async function main(): Promise<void> {
       const stored: StoredPhoto = { id: photoId, role: 'model', mode: 'fixture', source: 'synthetic', rightsId: null, original: photo.original, normalized: { ...photo.normalized, path }, createdAt: new Date().toISOString(), expiresAt: null };
       await store.writeMedia(path, photo.data); await store.commit(state => { state.photos.push(stored); return state; });
     }
+    const rawScenarios: unknown = JSON.parse(await readFile('fixtures/scenarios.json', 'utf8'));
+    if (!rawScenarios || typeof rawScenarios !== 'object' || Array.isArray(rawScenarios)) throw new Error('invalid_fixture_scenarios');
+    const scenarios: Record<string, FixtureScenario> = {};
+    for (const [prefix, scenario] of Object.entries(rawScenarios)) {
+      if (!/^[0-9a-f]{1,64}$/.test(prefix) || !FIXTURE_SCENARIOS.includes(scenario as FixtureScenario)) throw new Error('invalid_fixture_scenarios');
+      scenarios[prefix] = scenario as FixtureScenario;
+    }
     runner = new Runner({ store, limiter, signal: shutdown.signal, taskDeadlineMs: env.taskDeadlineMs,
-      client: job => new FixtureClient({ now: systemClock.now, result: async signal => {
+      client: job => new FixtureClient({ scenario: scenarioForHash(store.snapshot().photos.find(p => p.id === job.garmentPhotoId)!.original.sha256, scenarios), now: systemClock.now, result: async signal => {
         const state = store.snapshot(), model = state.photos.find(p => p.id === job.modelPhotoId)!, garment = state.photos.find(p => p.id === job.garmentPhotoId)!;
         return fixtureComposite(await store.readMedia(model.normalized.path), await store.readMedia(garment.normalized.path), signal);
       } }),

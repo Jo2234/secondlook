@@ -12,7 +12,7 @@ import { systemClock } from '../../src/youcam/operations.js';
 import { normalizePhoto } from '../../src/images/normalize.js';
 import type { StoredPhoto } from '../../src/shared/types.js';
 
-test('S2 fixture API checkpoint: gate, disabled buyer, atomic idempotency, durable ambiguous POST and restart', async () => {
+test('S2 fixture API checkpoint: gate, disabled buyer, atomic idempotency, durable ambiguous POST', async () => {
   const directory = process.env.YOUCAM_INT_DATA_DIR;
   if (!directory || !directory.endsWith('/data')) throw new Error('exact owned data namespace required');
   await expect(access(directory)).rejects.toMatchObject({ code: 'ENOENT' });
