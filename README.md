@@ -2,7 +2,7 @@
 
 A private scaffold for a thrift-listing workflow: original garment photos, flat measurements and labelled approximate AI try-on previews. Buyer photo uploads are disabled under PC-1.
 
-Implementation status: S0 scaffold drafted; no dependency installation, fixture rendering, typecheck or runtime verification has been performed. Live integration is planned and unverified. This is not a final contest pass.
+Implementation status: dependencies installed with scripts disabled under a closed master grant. Typecheck and 21 tests in the error, job-machine and ledger unit files passed. Other pure tests, synthetic fixture rendering and application runtime checks remain pending. Live integration is planned and unverified. This is not a final contest pass.
 
 ## Fixture-mode quick start (after granted installation and implementation)
 
@@ -28,4 +28,4 @@ After G-install completes, `pnpm typecheck` and `pnpm test:pure <up to 3 files>`
 
 ## Dependencies
 
-Pinned versions are in package.json. Lockfile-derived licensing is pending the two-phase install grant. sharp is Apache-2.0; its bundled dynamically linked libvips is LGPL-3.0-or-later. See docs/licenses.md. Project licence: MIT, Johan (Jo2234), 2026.
+Pinned versions are in package.json. Both preserved lockfile documents are inventoried in docs/licenses.json; licence metadata for packages absent from the installed tree remains pending. sharp is Apache-2.0; its bundled dynamically linked libvips is LGPL-3.0-or-later. See docs/licenses.md. Project licence: MIT, Johan (Jo2234), 2026.

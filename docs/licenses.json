@@ -1,6 +1,2518 @@
 {
-  "status": "pending-G-install",
-  "lockfileSha256": null,
-  "packages": [],
-  "reason": "No lockfile exists and no dependency installation or registry resolution is authorized yet."
+  "status": "lockfile-derived-partial-license-metadata",
+  "lockfileSha256": "c942728cd5b9ea8d672dfbb17de5af0ff1e56c9396c88c4e0d97c640965f35d1",
+  "documentCount": 2,
+  "packages": [
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@acemir/cssom",
+      "version": "0.9.32",
+      "integrity": "sha512-OijrAUu7rrJhSIoHNg6LMPS5e344nwUHA+1EFYYjrh64D+GmytUsfBQjci45TjT+rd5Spsp8B5xsZDT+TgyXXQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@asamuzakjp/css-color",
+      "version": "4.1.2",
+      "integrity": "sha512-NfBUvBaYgKIuq6E/RBLY1m0IohzNHAYyaJGuTK79Z23uNwmz2jl1mPsC5ZxCCxylinKhT1Amn5oNTlx1wN8cQg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@asamuzakjp/dom-selector",
+      "version": "6.8.1",
+      "integrity": "sha512-MvRz1nCqW0fsy8Qz4dnLIvhOlMzqDVBabZx6lH+YywFDdjXhMY37SmpV1XFX3JzG5GWHn63j6HX6QPr3lZXHvQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@asamuzakjp/nwsapi",
+      "version": "2.3.9",
+      "integrity": "sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/code-frame",
+      "version": "7.29.7",
+      "integrity": "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/compat-data",
+      "version": "7.29.7",
+      "integrity": "sha512-locTkQyKvwIEgBzVrn8693ebc97F2U8ZHjbXwDXJ5Fn2TCpNwTlKcaKLkdHop5c/icOFE7qt7Q9JC5hnKNa6Gg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/core",
+      "version": "7.29.7",
+      "integrity": "sha512-RgHBCvtjbOK2gXSNBNIkNoEc9qoVEtau3hj8gEqKQuL3HZAibKarWFEI3Lfm6EYKkLalOh8eSrj9b+ch9H/VBA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/generator",
+      "version": "7.29.8",
+      "integrity": "sha512-gZbepsdh3WDtgZKWL+vTPh71LSBrm/Y4/QDZBVCcYfmeTEEuoOYwlSy+G1StfJg+/Zy550u/3TATbm7qDbbMtg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/helper-compilation-targets",
+      "version": "7.29.7",
+      "integrity": "sha512-wem6WaBj4NaVYVdNhLPPVacES6ZJ+KBBfSkTMD3YZxbP3rm3Di85tJU5ljaUNhaOynt+Aj0xruhYuzQBt8n71g==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/helper-globals",
+      "version": "7.29.7",
+      "integrity": "sha512-3nQVUAtvkKH9zahfWgw96Jc/uFOmjACE1kQz82E2lqWmHBgjzbNlsC22nuQTfahmWeQtTq5nQ/4Nnd2A1wj4zA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/helper-module-imports",
+      "version": "7.29.7",
+      "integrity": "sha512-ejHwrQQYcm9xnTivShn2IDOlIzInN34AXskvq9QicvCtEzq1Vzclu/tKF8Jq1Cg8JG2GL6/EmjgsCT7lXepE3g==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/helper-module-transforms",
+      "version": "7.29.7",
+      "integrity": "sha512-UPUVSyXbOh627KiCIGQSgwWzGeBKLkaJ9PJEdrngIwMSzxLR4jS4+f1f1jb7VzBbg8nFLaYotvVPFCTqdrmTAg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/helper-plugin-utils",
+      "version": "7.29.7",
+      "integrity": "sha512-G7sHYigPY17oO5SYWnfD/0MTBwVR781S/JI643e/JhUYgVgWE/61SoW3NH9KWUKyKq5LVh3npif99Wkt6j86Jw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/helper-string-parser",
+      "version": "7.29.7",
+      "integrity": "sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "integrity": "sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/helper-validator-option",
+      "version": "7.29.7",
+      "integrity": "sha512-N9ZErrD+yW5geCDtBqnOoxmR8+tNKiGuxKlDpuJxfsqpa2dFcexaziGAE/qoHLiDDreVNMupxGmSoNlyvsA3gw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/helpers",
+      "version": "7.29.10",
+      "integrity": "sha512-EMCx3AGZ3WfAl6ht7AyQoPm2Lh+BGYEMdc4Q6Hf7uSCDOZFuLq44qNwL+iaim8VlyYhRAo4X43+weadK8ZB4Yg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/parser",
+      "version": "7.29.9",
+      "integrity": "sha512-CjXrNHTnvqBVqHgdBysY3vk2T8tpJHb5/RMeHJBTyVa9xgugCB0CJTx/3oO8RV2QRQP391RWpB7D6hLjm8V9uA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/plugin-transform-react-jsx-self",
+      "version": "7.29.7",
+      "integrity": "sha512-TL0hMc9xzy86VD31nUiwzd5otRAcyEPcsegCxolO0PvcXuH1v0kECe/UIznYFihpkvU5wg/jk4v0TTEFfm53fw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/plugin-transform-react-jsx-source",
+      "version": "7.29.7",
+      "integrity": "sha512-06IyK09H3wi4cGbhDBwp5gUGo0IKtnYa8tyTiephirPCK6fbobVGiXMMI5zLQ4aKEYP3wZ3ArU44o+8KMrSG/Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/runtime",
+      "version": "7.29.10",
+      "integrity": "sha512-NpugTzbKgGrNe45Ui32cN8vCFFMxVtP/9rtfwv0nP5FRDAjvYBxJcLVpYA9mr1jxP6cnIT7x9LUzuDTbWYYNRA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/template",
+      "version": "7.29.7",
+      "integrity": "sha512-puq+Gf35oI24FeN11LkoUQFqv9uwNeWpxXZi/Ji3rRIoKAzKnxRaZ+Gkj0vKS9ZCiTESfng1N9LyOyXvo+m+Gg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/traverse",
+      "version": "7.29.10",
+      "integrity": "sha512-B3lYAs2nkKskbgQ1nfy8Ma9ao9Q1rntTAQHrzzyDuj+TSO+X3le6PfWwqDvodsb+OumE10eMFfuMCTQSQ5iuIQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@babel/types",
+      "version": "7.29.8",
+      "integrity": "sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@csstools/color-helpers",
+      "version": "6.1.2",
+      "integrity": "sha512-grhRy3OKmniaAEKXMjua5z/EODX0MSqBGjunw8+j/3HQjOnahs2AGhvEOIYVUWcU6ScApbhLhVrQTX8XqrMrow==",
+      "license": "MIT-0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@csstools/css-calc",
+      "version": "3.4.3",
+      "integrity": "sha512-iex20d8CHVkyvg6B7UKV7uHnI2Bqo9g+EFfT9E0y+GvTvhZ/DwONJ+9aKb1dlqm0ZiGsL5RXjp0fCoJYnkeDjA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@csstools/css-color-parser",
+      "version": "4.2.6",
+      "integrity": "sha512-iiPQ3iRWwnJkeEn6RIu6SJPr7hYrLz6XZ9s/QZl+2/LI5KQVjpl2fdmDSZKuD4xP6GMmMPgHFFXg6k1Wkz0Trg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@csstools/css-parser-algorithms",
+      "version": "4.0.2",
+      "integrity": "sha512-40cSKyMvK+tq4qz6Awrlye2WGuOKt3FwPgtGg6KTfbHOWNw+Rk1rzbAtZnZ6IBhsY491HLRnDXwoyBAijmmILA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@csstools/css-syntax-patches-for-csstree",
+      "version": "1.1.15",
+      "integrity": "sha512-J0u7HkVl2nzSlhsiTOp4AmwcUQ3D+mGEEKfBy/7To5/y7F2OHwyLrXfrhR0SMgr4p5Lo+eaMVSeai24zUcBIxA==",
+      "license": "MIT-0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@csstools/css-tokenizer",
+      "version": "4.0.2",
+      "integrity": "sha512-OoKoR0f76dCY666JlcbhmVTs2drYj1GUXZTYTcbUgJjh9Nv41aFfZ21bPQTERm5+L5cBDo466NltB2lplS5GBw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@emnapi/runtime",
+      "version": "1.11.3",
+      "integrity": "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/aix-ppc64",
+      "version": "0.28.2",
+      "integrity": "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/android-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-5YfKeeI8qWfBZIX+u2xZC3Zlb3Os/gLS2sbEKM+I4ZOcsWmHS2WLysCcQZDAFRslDUU5Oiq44gf6PYN1vGwG5A==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/android-arm",
+      "version": "0.28.2",
+      "integrity": "sha512-kXXoiPVVGQcnIYGOeaovwOURpniDBpSq4A03qkQ+BMQqtGG6HYap3xne9C1O1yo4TR3qxlCX5IqqmX6fFo2Lqg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/android-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-O387ite7SzUyCcy3JQX4P4bLtEA7bLLkx+esve5JHnyYfNTxcVpXZo9jhdB0lTKN44gztELTdU7nS8Nr16Fs1Q==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-n4KqkOQrraxHJcgjM1RvwbigfQKIKJVpM7xp+KsxiyUSrRdIXnt73VhrPAx0fV44hgfmIVKjxMN9J1t5jySVkw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/darwin-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-uq6suIWYP37qzGddBKPw5QEQPi6HiLGsO7UmkpfyaYNQ3D+rN6w6WfwH+nuqcGXWvawGwxOEroO4YGnFh95azw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/freebsd-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-n+I0BTSRIoy+d6RPKnEVwql5UwBJolytvY4mAOIEJorKlqgPII8ix6slVVrfZ5Tnj7glIZvloylbB/EJPMWEXw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/freebsd-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-78XJTJkvPs0kz2w61301PJjXl4g7q3JqiYMZ/M/yVI73EHBrCRTgkhu9oqG7vPqq+a/yadEW8aD+agKlk5xrmg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/linux-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-pW4AC0P3it8c7do9MVM4p51FzHzdM/TZrerurgRcHJ2WTa1VQ1CIq18xncfpBJw4ojkiZZrKW2yIBWBP92j6Ug==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/linux-arm",
+      "version": "0.28.2",
+      "integrity": "sha512-XlDnu2q5yoqems+xay6wSAcg9DDD7K9RLKZEBOMZm3ckNpJBvOX20tSfby8KfrrhINDyv9V2YVZKY/SpoGJI8w==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/linux-ia32",
+      "version": "0.28.2",
+      "integrity": "sha512-CYbnj78HsIeA+DhgUKgFCfvNsTHFhMMrinUrMZpDXJXKN8T3XViTZ/+wtHeVxEWY8ewSzTFN+nRmSwO2tZaLUQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/linux-loong64",
+      "version": "0.28.2",
+      "integrity": "sha512-buwkd8nsph4R+ajRvw0qM5Hja/TXQow3ptzWO2EbG/cqcIkHloRrdlBtQlshyYGTNFvfkfJ5tpPLVkY4DtsPfQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/linux-mips64el",
+      "version": "0.28.2",
+      "integrity": "sha512-ZVykbDyk7519VwiNb9Lcj9m8XM6v5V9uKPvrEMkkEedVewf+0itkhahp4HDpgERXhwLRpWFypsGbG/J8s0QjJA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/linux-ppc64",
+      "version": "0.28.2",
+      "integrity": "sha512-CAXl+Dtd9UUuJd8pKKdwh6MLm3MUMiqMPmhZ3tTSXPqfyQ3vDl6R5hZdZ/kYojK4ofXtdfSv1tFq8XzWx3heNQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/linux-riscv64",
+      "version": "0.28.2",
+      "integrity": "sha512-GeXCej4IQtU1B+QlDV8W/RRvbzI3O/Stss+/bCXv4lZls5WGRtu2a+3JkA3i4qIUlMXpcHebWpF8AkJhATowuA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/linux-s390x",
+      "version": "0.28.2",
+      "integrity": "sha512-3H1weTYZPxt/WOhByszQZybS9w5lKzUn1FDMsgEChbHWQwHYQQRfBxgCcZvPhjHfKyJjIievvMmEUawJrdY9Dg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/linux-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-4xTZr1FUmSoQW4XIWmit3tzQrUTZM+N3P0XV8xROKYF50XfI7xeO90+1bZvNwxIufQ9hDQVRJH5YhgPVF8A/HQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/netbsd-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-sSATRjPeDBg3pdgHoQfoYBob11Kk1FGa9lui5RIHZCoCkJa9QKlvl3/vKz2usCmYYjs7ymJR/2Nnsqe+Hjt5nw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/netbsd-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-lqnzCV+mM0gIADaKihiCg6ifgfU2L3h5E33rNQBN1Y4MaVGnzryzmvvf7UHxprpQdE8hpqLolJ9Rl+SkIRDpyw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/openbsd-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-AL2qJILH7lNjrDmCQDvdxMfAUIv8KMNZOvrwAQ8i8//ntL9FflhOyMJ8OZSMBb8/AWXe3/5v5S20y3zCoZWKoQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/openbsd-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-QtiuPytchRyC4rwUKhexJdQKvDuZ6hWloi3igqPQNUJCS1/v9EiO3UTOXR6A3FoMo4fnAKbWJdqaIwhOzh8qEw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/openharmony-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-WkhYDmpTjLvGlScA1rwjRUmhl4k8oXR3cIbtqWmELgU/dFeHHlEllxDvdWcNJV9rbzCexB5vz8gtNewWLgCT7Q==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/sunos-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-GPMSkTOtMnv2U2F8gxe4Io6qmVs+YKyp832Etqqxr0hFngmXQ3rzwytelm3GIn7T4VviRUlf3sOgBOiTdvaf7g==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/win32-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-PIhhEkE9uPBleRBrQEJpUn7MBnibZzbGzYWPmY3x+YoVg/95zbjB4CxPPOQ8l5tYYM4mMaCthF8/1DIfBQQyWQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/win32-ia32",
+      "version": "0.28.2",
+      "integrity": "sha512-YmJbfTlvU7Sdn9BB+4PRES4oB6pxgS37MAONj+hBr/cpXS1aBPKXxNnDbu+QCWPj0o9dgyxeq79g6c5P8KeuYA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@esbuild/win32-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-5ebpxr3nWMzrL/rnUI755Jkuee0bHL/Gq0WTF9lvcpv73wAp5eu8MfBUgWK9bhWvZjj7yX8etf/8tI8Ney695g==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@exodus/bytes",
+      "version": "1.16.0",
+      "integrity": "sha512-IcpW84uEn3N7ETtNZMlxKhfl6Pec8rUNGOTBtWbK1FKhJxIFAptZyVrvVRVBimAJxJCgc3PxepxkdWWG4DVzfA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@hono/node-server",
+      "version": "1.19.17",
+      "integrity": "sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/colour",
+      "version": "1.1.0",
+      "integrity": "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-darwin-arm64",
+      "version": "0.35.5",
+      "integrity": "sha512-QRUlFQ0WxvdWyqqG/WtI3iupfD5rBzmCHXSdPsY91sAtVtTo7Q4cb6zOccZ3gqEqkr0f1As1ehLqmEpDsRf+lg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-darwin-x64",
+      "version": "0.35.5",
+      "integrity": "sha512-+BR255RhDlpygUpOc/Jdt1nT6DQ3XG/ERo5wbcdOf5Q320dKtPCKPLR1LJs9VGXRaMa8l1uUa0tkCNOXiAxZUw==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-freebsd-wasm32",
+      "version": "0.35.5",
+      "integrity": "sha512-Y/z91nEZ4uIBX5X3nfTovjU9lHNKFYbL2lpHCLVNmXQK03VIZvXBBt0KxbPGp2SdGSF+2mQU4e+hQaWOt86iAw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-libvips-darwin-arm64",
+      "version": "1.3.4",
+      "integrity": "sha512-5R89nBYiRdUlSWJxPhO+GVtaXzXSxKnRu/xqMn3KTA3L9EB9Oy/P+Nn2f2vlhPuUdy/Zusb2DarbyTpGCfEDuw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-libvips-darwin-x64",
+      "version": "1.3.4",
+      "integrity": "sha512-iR2OKH80yi0U+dUplyh3/xdpFvps6YkCwsXenIJxqxR1v9o+xtKTGbS9H7cps+2Vxjc8B1j96p75NmTGjIhtpQ==",
+      "license": "LGPL-3.0-or-later",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-libvips-linux-arm64",
+      "version": "1.3.4",
+      "integrity": "sha512-Y3dgX/6lE2QhQb+Gxy0WZxfg9MEm/JBjamZpS2IklP7xIQoKN4hzAm7KcMVGtaVDt3neE9OKBC7vAfonA/Lr1A==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-libvips-linux-arm",
+      "version": "1.3.4",
+      "integrity": "sha512-LmRtTsOHuvM2+wlO2Db37dx5MiZhB0FvSunciw48YjdOkZz9KAiRbm8ujeMOA1INqmei5NapFxYEK1D1ZSidmw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-libvips-linux-ppc64",
+      "version": "1.3.4",
+      "integrity": "sha512-Le6boB8Tai0Nis+gIxIpKx68UDVVIqdR8Tin5Yf1z2LJJQLDJvCDRqRu+jC2qCoD+eIomonmOwB4smBRxfVpYQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-libvips-linux-riscv64",
+      "version": "1.3.4",
+      "integrity": "sha512-aHkkIEHPRdQEegJN20MLmGtxYD9R2wQr3Cwpddnu5+YKMt6Uzax7S9h5gpZTo8wyrGuZSlfQ63OevL5mTyOC7Q==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-libvips-linux-s390x",
+      "version": "1.3.4",
+      "integrity": "sha512-ra/mB6MikESDUO7Yg+Mi95bFBb9GsObURuhnOv3OqknjGe9sZrG8tCe9q0xSIGrtLgvgw0gKnFWcK4blSgQOuQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-libvips-linux-x64",
+      "version": "1.3.4",
+      "integrity": "sha512-GJ//SSXbnwSDes02umB3nDJLFcQzw8a18V8fyhqr6tV515tOEMdImjjxj1AoafMRz56F3PHgftnj1QEKSU1zkw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-libvips-linuxmusl-arm64",
+      "version": "1.3.4",
+      "integrity": "sha512-hvulFwtjUcagsis6BBxHwGFwWoNZjgYmULGVrZcyfNbjA8hKILbRxGg15/7w5HDyXHXUos/j6baAWqnCyQ2DWA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-libvips-linuxmusl-x64",
+      "version": "1.3.4",
+      "integrity": "sha512-6zXKeE/p39I1AmA3cJG35eyBGNqNddLnUXjhwBnsGjFPWqf5VKkDBEqaEkPDoTEtkxwi2vv8Tcr2mDyP4So7Fg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-linux-arm64",
+      "version": "0.35.5",
+      "integrity": "sha512-LYVx5JTsOM2CBzmxreh+nl64/3H6Xb09iSLknqH47z2T2DFFxDeFLP5y4dJwe6H7uGQlHPyEEtIqyo3DYsRwdQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-linux-arm",
+      "version": "0.35.5",
+      "integrity": "sha512-LEaXK2WdXVK5ykcw0buWyPMsmLLL2vpHLD6yrNSW+JGEL3BZPA4tpKN6iaMc4AxTTAoaX/sU1rOL51lcIz48ZQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-linux-ppc64",
+      "version": "0.35.5",
+      "integrity": "sha512-QVxAAq8evVRI9ia2vqgwrmWucn5Dfv+JdWzj75pD8omHLPSP7f8p20O8jxzjCcuCEQEOtYOZUmX1hkiZ0kdevA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-linux-riscv64",
+      "version": "0.35.5",
+      "integrity": "sha512-LtdreXguaavKODPIfzJ4kffx7UNt1omwtK0rch4EBbbSTXPnxWmYSayXdLJw0fJzQ97kHt1gL/yh4tvU+nCyRQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-linux-s390x",
+      "version": "0.35.5",
+      "integrity": "sha512-UZasTOFiYzotTsGOCu42BfUzP6Tu6Do/947iRm1RsLKvlllxwGcn4RN27LibGWceix4Y+Pmw3jsnTcCQIgWjqA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-linux-x64",
+      "version": "0.35.5",
+      "integrity": "sha512-SxFtLTeJInhAA9Q836kux2vZNeOBQEx658qvbboZScr0wIARym3IcGmW7KpVD5sbVg0Ojy+udFQdayYIZyoNog==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-linuxmusl-arm64",
+      "version": "0.35.5",
+      "integrity": "sha512-9HbMclmI1zlNkFRs3z9/eBtDjfD0sGlrX1z6b1qwmiFY5ElDLh4BC0LPBdVp7z1DXFiKlIcznf+ZlsuZzLxQqg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-linuxmusl-x64",
+      "version": "0.35.5",
+      "integrity": "sha512-4KOphqB035HrVdqLZfCgMzzERrQkkzOwRhl4OAkRO1YCldbaFjySXMaK534Mo0V+LndnlJk+sbUyLeU0ULyD1A==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-wasm32",
+      "version": "0.35.5",
+      "integrity": "sha512-Ptsga1su4tQx+LLF1ECS9U6nz5kmrXKo6XVbtR48Ke3ZRxxgaWBu7IDtEe1quo8hiupwm6WFqxVlXaSf7IINGQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-webcontainers-wasm32",
+      "version": "0.35.5",
+      "integrity": "sha512-hfhF/FmoQyTUkA0bIKFOtw536BQSeBMe6BF6QyWlrPxT754+TFLaZ7sKKTfvvM0yJgKgaYTwnFCIZ/GuDw5SUA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-win32-arm64",
+      "version": "0.35.5",
+      "integrity": "sha512-X4t7g+7ZA5DKblCBEXGjUqqemj4vczING/5viFwAL8h4N3qYeyjwdCvRLHi4EdOUI+2Z7UFlp1VM+p/AuEtm6Q==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-win32-ia32",
+      "version": "0.35.5",
+      "integrity": "sha512-5Zm82LoBc43nhwNybZlG7Y1KO//Zhsn306fQl29ZOuStHLGTo3BWL83q3cznX0poxSAMuYL1On/BHBxkBeKr6A==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@img/sharp-win32-x64",
+      "version": "0.35.5",
+      "integrity": "sha512-x76eH0vEiHlcMQu8Y8IenntaACtddpT6W0wmXtWrnKcnKI7ME5DdgqhAD6SEWOEl1v2zDvkZDhFA9KnURwpfqg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@jridgewell/gen-mapping",
+      "version": "0.3.13",
+      "integrity": "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@jridgewell/remapping",
+      "version": "2.3.5",
+      "integrity": "sha512-LI9u/+laYG4Ds1TDKSJW2YPrIlcVYOwi2fUC6xB43lueCjgxV4lffOCZCtYFiH6TNOX+tQKXx97T4IKHbhyHEQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@jridgewell/resolve-uri",
+      "version": "3.1.2",
+      "integrity": "sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@jridgewell/sourcemap-codec",
+      "version": "1.6.0",
+      "integrity": "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@jridgewell/trace-mapping",
+      "version": "0.3.31",
+      "integrity": "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@napi-rs/lzma-linux-x64-gnu",
+      "version": "1.5.1",
+      "integrity": "sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@playwright/test",
+      "version": "1.64.1",
+      "integrity": "sha512-IaYGml/nSOiZWROfPtuIL7neuu9qDOZ3TNvNljUIrhDMxiGTgPjzj/g9p9RxpS2tSepPDRY+UwAaEeiKtUvIAg==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rolldown/pluginutils",
+      "version": "1.0.0-rc.3",
+      "integrity": "sha512-eybk3TjzzzV97Dlj5c+XrBFW57eTNhzod66y9HrBlzJ6NsCrWCp/2kaPS3K9wJmurBC0Tdw4yPjXKZqlznim3Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-android-arm-eabi",
+      "version": "4.64.9",
+      "integrity": "sha512-qJmhckvOleXp8R+BaXiVW/S34/3M7pvN17/QcG90A74BDaSvKv8ffY+GYG+a/xU0vEoITzdMSiM7o9HZSQWbfA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-android-arm64",
+      "version": "4.64.9",
+      "integrity": "sha512-dqQgds39BNWGB2ughJ6n2LTQFXk8RAOwnXj6m387OHpygfD93QRS1ODIfpiWyAa9gsFB9l34pSqeLmA0Xk/VBw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-darwin-arm64",
+      "version": "4.64.9",
+      "integrity": "sha512-scrMx4SGikOSbWknLmPD0v6OeJ1Wih3kyRLdNZnlVbBeKVWp1nRTVcpM0IxDJdc3u8UjesPHTmnX649u8cQpBw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-darwin-x64",
+      "version": "4.64.9",
+      "integrity": "sha512-fkwi2OQR+QWoViRFt08Bsca6G0e9pk/4z+JgmqHq6jSRTT0LtI27KRVK8bu++6L/CBtQ3OZePbqC3bcrwGzTqQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-freebsd-arm64",
+      "version": "4.64.9",
+      "integrity": "sha512-8Apr0Khn0r2MUsDtcOMbp85fDdXsX/E+iLhO17WUjG24m3O8ChArqI0isI7CAdj9Ouq177PHtVtEUpMNE1C4Gw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-freebsd-x64",
+      "version": "4.64.9",
+      "integrity": "sha512-H+upy4DhBcBZlUsCAMyr8wR0Dg9kj8sGloVZdZ7va2heJM/5jnROxI47dtXseJjlD/VoQe6MrXhY3b5ikOq/Vw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-arm-gnueabihf",
+      "version": "4.64.9",
+      "integrity": "sha512-b50NS9TbAEK/b16vBoKrkeNwy+HvGBXmtBbzX4wcodWOh9dQZvRTN9rUyElIXa36QnwXhU9PAVVkZpqRzSi2Tg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-arm-musleabihf",
+      "version": "4.64.9",
+      "integrity": "sha512-SdqcudB/FzjLESsRMgXhV+FXGtf6usxXwlMoRW7D/XS3f9CZ4T4wycRBu2h9bVl2AOaPpunoA8ftAM/MF4altQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-arm64-gnu",
+      "version": "4.64.9",
+      "integrity": "sha512-dg19FFRoovN+KZ+gMHBAq4Do8PgQmBcxpuhux57OuiR0QLavfn8uPBY8CP+UO50bO+xf0tK0GlqI/jld++5E6g==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-arm64-musl",
+      "version": "4.64.9",
+      "integrity": "sha512-+jyv5ofGmpAvtrzLjSr/e4syskeikEp5L82bUzB76auwOgK1VNVwZV/F2g1Pes9bhTznbejOefAqPglHSKYmTA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-loong64-gnu",
+      "version": "4.64.9",
+      "integrity": "sha512-MKFXxqmkzCbtNvx/vjiJdss44eRtVabhCtDWcCFD9NHGwP+YkqnM/slnEsv/3fsoq9ukTtudraAjGhptrUPCVg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-loong64-musl",
+      "version": "4.64.9",
+      "integrity": "sha512-lhARcOT6n7Ni9hpQRq8LZjbuoW+G/GXaW4Jfhx2MbmjnCj9XxLMRTceJIMpiMLQVWm+qxe7oq1sYvlIGOAW34Q==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-ppc64-gnu",
+      "version": "4.64.9",
+      "integrity": "sha512-oORQzGxZ1oHghJwLdwc8Ni0SY9otILAeXsWdiImTF4F5HkWJUwh5s/269PF5tYILNC1z/3RwFsrgcHPguBcb0g==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-ppc64-musl",
+      "version": "4.64.9",
+      "integrity": "sha512-J2JQHQt7oR1uutd2OSwbV2Qpb2LI5gggPolbkUwDe7vn/0dnduZ0w6EIbGnZUAw7uIKaMgfVylcH6V+Aov8kRA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-riscv64-gnu",
+      "version": "4.64.9",
+      "integrity": "sha512-bWaKLrfzeQ9mOzJJxXbPgw2RH6VAaTJrb/60Tqf7YSMxubG8780Hzm7Us+D6qVW8QRGJYl4VUvVXxnRB0o9zvQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-riscv64-musl",
+      "version": "4.64.9",
+      "integrity": "sha512-TFJyaCB9NsvSyvVGQgTSRD9XgxsAq99ivDDkt9KAySlrNW5Obsd1kQpvoCvBCOLq+JlJTjmtroLH0wp8M8mEsA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-s390x-gnu",
+      "version": "4.64.9",
+      "integrity": "sha512-DvmOM5xz/wDnUJFVjqP32ahalxn7BDuvO25bpuFOrb50AIFCCcFPN4lWWUDD1c8Ddv9sMO9SXyqtOet8G8u9cQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-x64-gnu",
+      "version": "4.64.9",
+      "integrity": "sha512-aFzokHK3yE00mzAvKm/PY76OsOOTjvoTGE82Vp89iBDyD2wUBlV4ZsR2tWkRECTEFk6TC4Yc3zaEWjPqq1vstQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-linux-x64-musl",
+      "version": "4.64.9",
+      "integrity": "sha512-t/yMdeaaQUuNNpmT7taBmH2VvHzgT4YA/IaKVE3qVr4PYQemn/kmJkL4uG4UvTLcWXQd0MSoOa/3URYSWGmUEg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-openbsd-x64",
+      "version": "4.64.9",
+      "integrity": "sha512-4dnxKQ8GHARyjqAU87q5UWhywZTpIbR2VWhtACdC37GD1SGszmvb3TaBFVA4n+fnDHSKMut4ZJ63hVFwgnxVtg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-openharmony-arm64",
+      "version": "4.64.9",
+      "integrity": "sha512-1qdQj6IrNoR0xFvrCQHmhBXe9HMbBGNTFi+3n4jKMt2rTx4k0aeAdraZU4WDOMfL9tAwS8/TRSuquvNuPQ+Gpw==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-win32-arm64-msvc",
+      "version": "4.64.9",
+      "integrity": "sha512-yc1GSEHIYhKGN5WSaJc+eMy8bZvzcvAmflEgFh8L3xcy8dYxGmfrudyBnBFde9f6JzOa1kFqocF8BHaWybjQoA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-win32-ia32-msvc",
+      "version": "4.64.9",
+      "integrity": "sha512-VzHGvosAkLIzrwqvSgJBPDmGFTF/yE8OtMT4H5z8pM1NA0NiPpvTYnUh+9xPd+d5oy/wqF317FmJ1I8Kk8pp0Q==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-win32-x64-gnu",
+      "version": "4.64.9",
+      "integrity": "sha512-FB77txy1PiAcJgG72nOLA6R0S3PRZahs8Spx0z2yseDUkoMmJcrQghiebJ2JHZ74cCOVlX/MYd4dUbJtJJ8fow==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@rollup/rollup-win32-x64-msvc",
+      "version": "4.64.9",
+      "integrity": "sha512-IoIgQLpK1DbOcQf1vX+i5oe5LXypsCVb1j/mU6BLAbOGmXH4E+j4kMfgZRwPYUohVBurNyVMgIKVM5dR6xA0kA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@standard-schema/spec",
+      "version": "1.1.0",
+      "integrity": "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@testing-library/dom",
+      "version": "10.4.2",
+      "integrity": "sha512-yzr2S9HyAIdhz2/6qHgbs665Q7PKVcDF05vsOlHPxG1mo36gKVesdYVeDLnXgfjJ03CrKRk08knc6+E/9m8v2Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@testing-library/react",
+      "version": "16.3.3",
+      "integrity": "sha512-Uo193NgQbPMz6lrrhtRQQFcMC6Re/ELLFbbuVL30WDlZxlpZf9/lMHTAVxPRLw1q1iu9OJmR1c2BLiENRstdBg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/aria-query",
+      "version": "5.0.4",
+      "integrity": "sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/babel__core",
+      "version": "7.20.5",
+      "integrity": "sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/babel__generator",
+      "version": "7.27.0",
+      "integrity": "sha512-ufFd2Xi92OAVPYsy+P4n7/U7e68fex0+Ee8gSG9KX7eo084CWiQ4sdxktvdl0bOPupXtVJPY19zk6EwWqUQ8lg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/babel__template",
+      "version": "7.4.4",
+      "integrity": "sha512-h/NUaSyG5EyxBIp8YRxo4RMe2/qQgvyowRwVMzhYhBCONbW8PUsg4lkFMrhgZhUe5z3L3MiLDuvyJ/CaPa2A8A==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/babel__traverse",
+      "version": "7.28.0",
+      "integrity": "sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/chai",
+      "version": "5.2.3",
+      "integrity": "sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/deep-eql",
+      "version": "4.0.2",
+      "integrity": "sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/estree",
+      "version": "1.0.9",
+      "integrity": "sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/node",
+      "version": "24.19.2",
+      "integrity": "sha512-93d49wCWJkCyN87MxLpNN6KXPCwFw7bVUg79mGUV1OS40JGWwVCr8n61DXCSqz7CV6/VfPkb7xec7uP2M+QHWQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/react-dom",
+      "version": "19.3.0",
+      "integrity": "sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@types/react",
+      "version": "19.3.0",
+      "integrity": "sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@vitejs/plugin-react",
+      "version": "5.2.0",
+      "integrity": "sha512-YmKkfhOAi3wsB1PhJq5Scj3GXMn3WvtQ/JC0xoopuHoXSdmtdStOpFrYaT1kie2YgFBcIe64ROzMYRjCrYOdYw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@vitest/expect",
+      "version": "4.1.12",
+      "integrity": "sha512-vFlTt+YEu9WBpNjdGayNmlMVzrWPi1+sv853/7t2FU7hpO5gAFBKHzQmkCq5Xjpr+evegF2994LQT3hF3mRlqQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@vitest/mocker",
+      "version": "4.1.12",
+      "integrity": "sha512-fKShNpKZzupWZuY0z7egydvL0sqW4INEZBEExMBMAa6izlENEVHwoXgdaTCaBZ5fwlr4xf2o1wXC83n9RpO+NA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@vitest/pretty-format",
+      "version": "4.1.12",
+      "integrity": "sha512-XW9O8+Mxx4VpCtkYdMJLZQQwsVryP9wk7cPKDxtXFfwSak6yRh5+2fep/Y0XF/ElBvJHq8bcYdi6aeuai0opZA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@vitest/runner",
+      "version": "4.1.12",
+      "integrity": "sha512-NKlVKCr5QnCe8jijdMnmkpHHU+WTqiLFR6G0pHji9uRjXK9xJl1k1nTw6F3pOOj2PDcsDt2GKQMI7wIsaT491w==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@vitest/snapshot",
+      "version": "4.1.12",
+      "integrity": "sha512-ko1y1Qgb/slzQ9mr+b89Cuqud8WG1TKtsPD8r7ZUBdvVOGt85Af2HwCqHujrhwJq95hs/9RM7fcAPg57o1vlzw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@vitest/spy",
+      "version": "4.1.12",
+      "integrity": "sha512-RGq9x4JNGNTZHEJxvN0oSiJjeSCExm0n2gZKKJZHY9cX5AVA6M7VJILBT3ZJ/tJ/0J9uWT7fETV9/btoi//vSg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "@vitest/utils",
+      "version": "4.1.12",
+      "integrity": "sha512-Q3awXrwOfEV+qc3WmO5ONyE0yO7Q1gQ9/oyHxGLZ/pl7N3NO/ZztqQwKLuwMkV+CA1JYSIeO3gkHnRDIo4AVaA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "agent-base",
+      "version": "7.1.4",
+      "integrity": "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "ansi-regex",
+      "version": "5.0.1",
+      "integrity": "sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "ansi-styles",
+      "version": "4.3.0",
+      "integrity": "sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "ansi-styles",
+      "version": "5.2.0",
+      "integrity": "sha512-Cxwpt2SfTzTtXcfOlzGEee8O+c+MmUgGrNiBcXnuWxuFJHe6a5Hz7qwhwe5OgaSYI0IJvkLqWX1ASG+cJOkEiA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "aria-query",
+      "version": "5.3.0",
+      "integrity": "sha512-b0P0sZPKtyu8HkeRAfCq0IfURZK+SuwMjY1UXGBU27wpAiTwQAIlq56IbIO+ytk/JjS1fMR14ee5WBBfKi5J6A==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "assertion-error",
+      "version": "2.0.1",
+      "integrity": "sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "baseline-browser-mapping",
+      "version": "2.11.29",
+      "integrity": "sha512-YeesxhUmR4h5y5V8KF8iBCqJb8YFrBJ++XBTeGcWIaQOYXGN19JM0FoiOjAhwuDoln8owMgXcWBmgHtYSkky2w==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "bidi-js",
+      "version": "1.1.0",
+      "integrity": "sha512-fX1Onk0tdVPC7obPWB5EbJ1z7NVhLq4m2xZLq2YXBkxzMXIGRpNMU88n0EPgWseKl12J7zXs7qrDxPK4sRs2fg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "browserslist",
+      "version": "4.29.3",
+      "integrity": "sha512-1R4kiYKXGViqEN0CnoDrXc1StD9niAwu+j2dukWzrD4bJgsD4lDmEp0CRbc6E/vYJIfTHwPmwyaKtVSudICdPA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "caniuse-lite",
+      "version": "1.0.30001816",
+      "integrity": "sha512-+8Yx7BXCoqk6IF8yTicjfUR6D/ldJzdlsodlEOiOSPmhK844WIgk67/zIQaGAOxNkZyyvBlrRFnLvqKIoqbAFw==",
+      "license": "CC-BY-4.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "chai",
+      "version": "6.3.0",
+      "integrity": "sha512-XWAtwJ6OHO+tj0EKCs0Y2UamnyOxseZWltU4x2U2wh8g4AigdjwvtUjvLP2tqkA/avxHEtzxNaqGq/YGNwckKg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "chalk",
+      "version": "4.1.2",
+      "integrity": "sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "cliui",
+      "version": "8.0.1",
+      "integrity": "sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "color-convert",
+      "version": "2.0.1",
+      "integrity": "sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "color-name",
+      "version": "1.1.4",
+      "integrity": "sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "concurrently",
+      "version": "9.2.5",
+      "integrity": "sha512-YMZlvWrTPQEhjKp60XSmMGt60+pffbv6DyRnOMvVO98+J7aF8w8Ui9FhdcOwvSixc/kyR6SoVvmejcn/2lZBqg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "convert-source-map",
+      "version": "2.0.0",
+      "integrity": "sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "css-tree",
+      "version": "3.2.1",
+      "integrity": "sha512-X7sjQzceUhu1u7Y/ylrRZFU2FS6LRiFVp6rKLPg23y3x3c3DOKAwuXGDp+PAGjh6CSnCjYeAul8pcT8bAl+lSA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "cssstyle",
+      "version": "5.3.7",
+      "integrity": "sha512-7D2EPVltRrsTkhpQmksIu+LxeWAIEk6wRDMJ1qljlv+CKHJM+cJLlfhWIzNA44eAsHXSNe3+vO6DW1yCYx8SuQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "csstype",
+      "version": "3.2.3",
+      "integrity": "sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "data-urls",
+      "version": "6.0.1",
+      "integrity": "sha512-euIQENZg6x8mj3fO6o9+fOW8MimUI4PpD/fZBhJfeioZVy9TUpM4UY7KjQNVZFlqwJ0UdzRDzkycB997HEq1BQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "debug",
+      "version": "4.4.3",
+      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "decimal.js",
+      "version": "10.6.0",
+      "integrity": "sha512-YpgQiITW3JXGntzdUmyUR1V812Hn8T1YVXhCu+wO3OpS4eU9l4YdD3qjyiKdV6mvV29zapkMeD390UVEf2lkUg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "dequal",
+      "version": "2.0.3",
+      "integrity": "sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "detect-libc",
+      "version": "2.1.2",
+      "integrity": "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "dom-accessibility-api",
+      "version": "0.5.16",
+      "integrity": "sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "electron-to-chromium",
+      "version": "1.5.459",
+      "integrity": "sha512-4SC9HHSFjO/liAhifpdOL5hG9b4BP7/5G3y3UPZVO8trlAXr1CaUEEJL0gWK3kOcYcZrOA5rkwG45Gra/lTIgg==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "emoji-regex",
+      "version": "8.0.0",
+      "integrity": "sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "entities",
+      "version": "8.1.0",
+      "integrity": "sha512-kxL7msIffSuh9aaFAMD7rxAIuTRMAHMeBtgHW2yUdWw732ZNh4MehkF2gdjvtdmikkaIP9bFDDJOPlsvm7avrA==",
+      "license": "BSD-2-Clause",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "es-module-lexer",
+      "version": "2.3.2",
+      "integrity": "sha512-poHGpORABojJJucnV9KbOavETW8lBVnphkW77ER5/BQ5Fz7oXSoCNek7IH3vR5nRjdsEz926ibFYX8KtLQmdyw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "esbuild",
+      "version": "0.28.2",
+      "integrity": "sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "escalade",
+      "version": "3.2.0",
+      "integrity": "sha512-WUj2qlxaQtO4g6Pq5c29GTcWGDyd8itL8zTlipgECz3JesAiiOKotd8JU6otB3PACgG6xkJUyVhboMS+bje/jA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "estree-walker",
+      "version": "3.0.3",
+      "integrity": "sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "expect-type",
+      "version": "1.4.0",
+      "integrity": "sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "fast-check",
+      "version": "4.10.2",
+      "integrity": "sha512-iK2f+YrcmoeGqk6fA0ea2bptcu/itMIm4NfEozq6N25+aG6h7s5HZbB/k1aV7b5w5sFLMCbbtRUsTVR+BgC3xw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "fdir",
+      "version": "6.5.0",
+      "integrity": "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "fsevents",
+      "version": "2.3.3",
+      "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "gensync",
+      "version": "1.0.0-beta.2",
+      "integrity": "sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "get-caller-file",
+      "version": "2.0.5",
+      "integrity": "sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "has-flag",
+      "version": "4.0.0",
+      "integrity": "sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "hono",
+      "version": "4.13.13",
+      "integrity": "sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "html-encoding-sniffer",
+      "version": "6.0.0",
+      "integrity": "sha512-CV9TW3Y3f8/wT0BRFc1/KAVQ3TUHiXmaAb6VW9vtiMFf7SLoMd1PdAc4W3KFOFETBJUb90KatHqlsZMWV+R9Gg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "http-proxy-agent",
+      "version": "7.0.2",
+      "integrity": "sha512-T1gkAiYYDWYx3V5Bmyu7HcfcvL7mUrTWiM6yOfa3PIphViJ/gFPbvidQ+veqSOHci/PxBcDabeUNCzpOODJZig==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "https-proxy-agent",
+      "version": "7.0.6",
+      "integrity": "sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "is-fullwidth-code-point",
+      "version": "3.0.0",
+      "integrity": "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "is-potential-custom-element-name",
+      "version": "1.0.1",
+      "integrity": "sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "js-tokens",
+      "version": "4.0.0",
+      "integrity": "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "jsdom",
+      "version": "27.4.0",
+      "integrity": "sha512-mjzqwWRD9Y1J1KUi7W97Gja1bwOOM5Ug0EZ6UDK3xS7j7mndrkwozHtSblfomlzyB4NepioNt+B2sOSzczVgtQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "jsesc",
+      "version": "3.1.0",
+      "integrity": "sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "json5",
+      "version": "2.2.3",
+      "integrity": "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "lru-cache",
+      "version": "11.5.3",
+      "integrity": "sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg==",
+      "license": "BlueOak-1.0.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "lru-cache",
+      "version": "5.1.1",
+      "integrity": "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "lz-string",
+      "version": "1.5.0",
+      "integrity": "sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "magic-string",
+      "version": "0.30.21",
+      "integrity": "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "mdn-data",
+      "version": "2.27.1",
+      "integrity": "sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ==",
+      "license": "CC0-1.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "ms",
+      "version": "2.1.3",
+      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "nanoid",
+      "version": "3.3.20",
+      "integrity": "sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "node-releases",
+      "version": "2.0.59",
+      "integrity": "sha512-5qr2okC4ItAI0hG5SaV0HoYMpnM/Y6+Oqr7AmPYy/2uEoGvS+GbSKLeRxSS1uAdu59yz0ouzcuXievSgg///WA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "obug",
+      "version": "2.2.1",
+      "integrity": "sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "parse5",
+      "version": "8.0.1",
+      "integrity": "sha512-z1e/HMG90obSGeidlli3hj7cbocou0/wa5HacvI3ASx34PecNjNQeaHNo5WIZpWofN9kgkqV1q5YvXe3F0FoPw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "pathe",
+      "version": "2.0.3",
+      "integrity": "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "picocolors",
+      "version": "1.1.1",
+      "integrity": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "picomatch",
+      "version": "4.0.7",
+      "integrity": "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "playwright-core",
+      "version": "1.64.1",
+      "integrity": "sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "playwright",
+      "version": "1.64.1",
+      "integrity": "sha512-HCrVhHr5QQuwYoswEUGTb7gGp522yflbv/ST8nF4sFWGuLjQCt17Q/EubpGGSNKYn1tsTCPZxqHhHCfVURu7UA==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "postcss",
+      "version": "8.5.30",
+      "integrity": "sha512-zkd+e9S1AQHhmaBKye9zlFHWjOwVgqXl1q3ECYy8561K7qxR2cREf/STLskulBFd78k6AOFeA+ff1TtEzk9bAA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "pretty-format",
+      "version": "27.5.1",
+      "integrity": "sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "punycode",
+      "version": "2.3.1",
+      "integrity": "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "pure-rand",
+      "version": "8.4.2",
+      "integrity": "sha512-vvuOGgcuPJAirlHvuQw1TrOiw7ptaIXXmIbNuiNOY6lNGJJH49PQ1Kj4nd783nPdQhQdicgOjVI2yI/9BD6/Ng==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "react-dom",
+      "version": "19.3.1",
+      "integrity": "sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "react-is",
+      "version": "17.0.2",
+      "integrity": "sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "react-refresh",
+      "version": "0.18.0",
+      "integrity": "sha512-QgT5//D3jfjJb6Gsjxv0Slpj23ip+HtOpnNgnb2S5zU3CB26G/IDPGoy4RJB42wzFE46DRsstbW6tKHoKbhAxw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "react",
+      "version": "19.3.1",
+      "integrity": "sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "require-directory",
+      "version": "2.1.1",
+      "integrity": "sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "require-from-string",
+      "version": "2.0.2",
+      "integrity": "sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "rollup",
+      "version": "4.64.9",
+      "integrity": "sha512-mnPSQINChN7PpT+a5CI0/+87hm/+6zxSKBK1XonrzQ0zFnglaTjhkTP2Br4yNCTcLHUEvrAfZffH57jGf+8xBQ==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "rxjs",
+      "version": "7.8.2",
+      "integrity": "sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "saxes",
+      "version": "6.0.0",
+      "integrity": "sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "scheduler",
+      "version": "0.28.0",
+      "integrity": "sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "semver",
+      "version": "6.3.1",
+      "integrity": "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "semver",
+      "version": "7.8.5",
+      "integrity": "sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "sharp",
+      "version": "0.35.5",
+      "integrity": "sha512-Ywn4OnzGukp7CDMrp08RQ50YKmuwG47brZgIVPTvBaaAfQlRlygrRqSrxdCiL9M+LlzLBiJ68IR1QqvzHyjC7g==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "shell-quote",
+      "version": "1.12.0",
+      "integrity": "sha512-PcByqNyT/38F2kDNi006HAMRJaULuBzq/FOsw3qdZvX/GA9W/jamDaRskgHjubHiftXK5sIFxLNkvrXUwcof6Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "siginfo",
+      "version": "2.0.0",
+      "integrity": "sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "source-map-js",
+      "version": "1.2.2",
+      "integrity": "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==",
+      "license": "BSD-3-Clause",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "stackback",
+      "version": "0.0.2",
+      "integrity": "sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "std-env",
+      "version": "4.3.0",
+      "integrity": "sha512-OtU/EgQ1kIm5KwqQpBC6ZEMXrZRui11w8zgfTWp8cdO9B8OaPsbA8bTHO2P+HNo1VlUTGMVBwPhydu6poeXiag==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "string-width",
+      "version": "4.2.3",
+      "integrity": "sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "strip-ansi",
+      "version": "6.0.1",
+      "integrity": "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "supports-color",
+      "version": "7.2.0",
+      "integrity": "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "supports-color",
+      "version": "8.1.1",
+      "integrity": "sha512-MpUEN2OodtUzxvKQl72cUF7RQ5EiHsGvSsVG0ia9c5RbWGL2CI4C7EpPS8UTBIplnlzZiNuV56w+FuNxy3ty2Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "symbol-tree",
+      "version": "3.2.4",
+      "integrity": "sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tinybench",
+      "version": "2.9.0",
+      "integrity": "sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tinyexec",
+      "version": "1.3.1",
+      "integrity": "sha512-GCvB3aoys96IuDFBMcTB46JOR6mdMtAToqwiW8JlWhsoh1mhHi/xn9ss/Dg7N555GiJyEt2qzoG/NHCwM6h1EA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tinyglobby",
+      "version": "0.2.17",
+      "integrity": "sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tinyrainbow",
+      "version": "3.2.0",
+      "integrity": "sha512-LgO3D9yZJjApUiuUfl9iFAwrtaX4+lok3wJIqttGoKCHlWUqHqbQpnxCf82L8FjgKsh4iGo78hqJwgL8F6To2A==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tldts-core",
+      "version": "7.4.18",
+      "integrity": "sha512-KI2PKvCmvQI/xD6ypPqkU0i7oxNXR/O58RLRaHR4svsgVUQ2JE/XC8BtMbG6PSehD27I8sZJRcC1ASnCy6lp3g==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tldts",
+      "version": "7.4.18",
+      "integrity": "sha512-somxA8xKAUzlAxl0TX/jMSYIbRNFIVGnI96pVGJPeMc5BsHmfVXn6mOJT6U++ELnl04eGfzpfcEuZe8WiASkXg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tough-cookie",
+      "version": "6.0.2",
+      "integrity": "sha512-exgYmnmL/sJpR3upZfXG5PoatXQii55xAiXGXzY+sROLZ/Y+SLcp9PgJNI9Vz37HpQ74WvDcLT8eqm+kV3FzrA==",
+      "license": "BSD-3-Clause",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tr46",
+      "version": "6.0.0",
+      "integrity": "sha512-bLVMLPtstlZ4iMQHpFHTR7GAGj2jxi8Dg0s2h2MafAE4uSWF98FC/3MomU51iQAMf8/qDUbKWf5GxuvvVcXEhw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tree-kill",
+      "version": "1.2.2",
+      "integrity": "sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tslib",
+      "version": "2.8.1",
+      "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==",
+      "license": "0BSD",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "tsx",
+      "version": "4.23.15",
+      "integrity": "sha512-Yiex1Ovn8z2xPpOWckIiysV1SSyRMY9BkLF++q0yKiDxCqRhosKfMg3janKkiLBwZ5c/YryloKwGZcrEmtwxKw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "typescript",
+      "version": "6.0.3",
+      "integrity": "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "undici-types",
+      "version": "7.24.6",
+      "integrity": "sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "update-browserslist-db",
+      "version": "1.3.4",
+      "integrity": "sha512-t8wonIOdQyOjtPd2VktlBu6QjTVTks6v8bSi7kd0r2Vll8TK1JYDZtRRdbmCHOAMphkZgrzK+L+vXK4pyZ8t4A==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "vite",
+      "version": "7.3.7",
+      "integrity": "sha512-AHEzTORMbi7/7aXp7w7KZ5+DCUdSeLsJz0grY8xHpc9DHdYb0vQu6DqJfm2tOw3gDExNgPgnJTXxM6syYFHaCA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "vitest",
+      "version": "4.1.12",
+      "integrity": "sha512-5eWdz2yb3ajxWF3C8C4TjkXl7FGm3n2E/VlazALrQHzK7nYMSGFnCZto0bbPNl77AwkOZVLk0YnBAejUu0NiWA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "w3c-xmlserializer",
+      "version": "5.0.0",
+      "integrity": "sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "webidl-conversions",
+      "version": "8.0.1",
+      "integrity": "sha512-BMhLD/Sw+GbJC21C/UgyaZX41nPt8bUTg+jWyDeg7e7YN4xOM05YPSIXceACnXVtqyEw/LMClUQMtMZ+PGGpqQ==",
+      "license": "BSD-2-Clause",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "whatwg-mimetype",
+      "version": "4.0.0",
+      "integrity": "sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "whatwg-mimetype",
+      "version": "5.0.0",
+      "integrity": "sha512-sXcNcHOC51uPGF0P/D4NVtrkjSU2fNsm9iog4ZvZJsL3rjoDAzXZhkm2MWt1y+PUdggKAYVoMAIYcs78wJ51Cw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "whatwg-url",
+      "version": "15.1.0",
+      "integrity": "sha512-2ytDk0kiEj/yu90JOAp44PVPUkO9+jVhyf+SybKlRHSDlvOOZhdPIrr7xTH64l4WixO2cP+wQIcgujkGBPPz6g==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "why-is-node-running",
+      "version": "2.3.0",
+      "integrity": "sha512-hUrmaWBdVDcxvYqnyh09zunKzROWjbZTiNy8dBEjkS7ehEDQibXJ7XvlmtbwuTclUiIyN+CyXQD4Vmko8fNm8w==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "wrap-ansi",
+      "version": "7.0.0",
+      "integrity": "sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "ws",
+      "version": "8.22.0",
+      "integrity": "sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "xml-name-validator",
+      "version": "5.0.0",
+      "integrity": "sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==",
+      "license": "Apache-2.0",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "xmlchars",
+      "version": "2.2.0",
+      "integrity": "sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "y18n",
+      "version": "5.0.8",
+      "integrity": "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "yallist",
+      "version": "3.1.1",
+      "integrity": "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "yargs-parser",
+      "version": "21.1.1",
+      "integrity": "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==",
+      "license": "ISC",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "yargs",
+      "version": "17.7.2",
+      "integrity": "sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "application",
+      "documentIndex": 1,
+      "name": "zod",
+      "version": "4.6.7",
+      "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==",
+      "license": "MIT",
+      "metadataSource": "installed_package_json"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.android-arm64",
+      "version": "12.11.2",
+      "integrity": "sha512-owLw13OfPkEoY+hLBNeeG+dCFhywr7q2d/EHPz4mNL2RhKnv8gNwMARkjkiDQu234aItVwFNDeGnmQXm+ikkAg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.android-x64",
+      "version": "12.11.2",
+      "integrity": "sha512-GYPkVebl4iokOA/4MPSpGoUVfFlsth7uqOCe1XiaiM23LAdvUOMJBObqHJijr89ZqjwHm9pO6vO45GRwJ2U2qA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.darwin-arm64",
+      "version": "12.11.2",
+      "integrity": "sha512-n9M4On66y8FDxUAKgMO1FXt0qihyG4e+56p3/F0uo8Bx9KplW8BwKVnXigzCJ8aNM6sVVPkOE6M9XXbeVIxnZA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.darwin-x64",
+      "version": "12.11.2",
+      "integrity": "sha512-oSW7n3sBT0c0cyk4kj10T2Y6Mpm+OFEiCAWozgX039tdoI6yqJF1uaFD3sw7ugLdu6VV3+uY0pa1TUZIPdxDWA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.freebsd-x64",
+      "version": "12.11.2",
+      "integrity": "sha512-qbzc3KoDpa/Lkf8vs3jnDe6dUUbso+6eLIyssYFMiliLpYNxn8dirk11YoNnOQcdHVB50v5RFls1Yid6ttT5pg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.linux-arm64-musl",
+      "version": "12.11.2",
+      "integrity": "sha512-uMEYDwKRktGwANubQ+kYCwmhNwg3Ik6qK89ahsbQ5cP30R/5FVJb/T99vr9XRUBC/A7mZI6eeT92oyVas9ACyg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.linux-arm64",
+      "version": "12.11.2",
+      "integrity": "sha512-6e8ZAQUwFXAWHHHv5FesWqf/kEK04wuitBv5f/gxzkC0DiBfaixr+f+6JQede8SF4Ji5LcMwVFJbzAtffpWxEg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.linux-ppc64",
+      "version": "12.11.2",
+      "integrity": "sha512-Ui8A4nepkVupx2VpuFfysEluMvWK6gTB5rgVts7Ss/+8dj0RD28x3F/seNeH/zSypgC6yKdV6qsKVQh/uffTuQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.linux-riscv64",
+      "version": "12.11.2",
+      "integrity": "sha512-i1yLdQ5bu+wjQ+srtFoJAaY2gN/+oXHFdjul4llCeoDxHE0rTIG3R41NhHfCjyFPW4+CpbBT58933CL9sMOCnA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.linux-s390x",
+      "version": "12.11.2",
+      "integrity": "sha512-YS1/lhPjjTsN4QL50VaFZKRa3Uc/bDnhE8eKbJMFvuX06UuFS5YaiDg04APoZdfVSGqTfX27QAg7rfLMSWaqxA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.linux-x64-musl",
+      "version": "12.11.2",
+      "integrity": "sha512-7eIxQR05fvJxCujUSKp5KTtehJ7QqrgqP/HD1+BcB/SaV2Be4XI1PEHiOgA1zxsiMIeMvTF6E4G4dYHrFjeXRg==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.linux-x64",
+      "version": "12.11.2",
+      "integrity": "sha512-FK7QKe24AYgppJwO3mpooYptduuvIGqKJPi5ac7MdnWkjUy46JBfYhCW0grnkWKC8YOf0x+vGviuQqJEj3SpQQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.win32-arm64",
+      "version": "12.11.2",
+      "integrity": "sha512-PCTjVDdJb6VvraZxrEeFv6EqEA0hhIsAySx28e95J2Tqpi88hLpgOXgNqV0vpxq9A+b8GLQfyk/D+1UlJPv/YQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "@pnpm/exe.win32-x64",
+      "version": "12.11.2",
+      "integrity": "sha512-8sgX86OvRjJ3yZs/TvGR2L31wH9ScPZ+f+geKI3ikuB0RRiK3i4LlTRO8OXN6pdRqj8epMde4312MCjj7JsJdA==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    },
+    {
+      "scope": "manager_environment",
+      "documentIndex": 0,
+      "name": "pnpm",
+      "version": "12.11.2",
+      "integrity": "sha512-JaUWUqGWeFr18ovabf6NxYLr76SsHRgCIc4TkCMcX7dmN4IupLbkYzznSs3LCnf3Ja8RutOBd/3t2u6BipVcuQ==",
+      "license": null,
+      "metadataSource": "not_installed_metadata_pending"
+    }
+  ]
 }
