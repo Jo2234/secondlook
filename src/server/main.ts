@@ -23,16 +23,33 @@ async function main(): Promise<void> {
   const store = await Store.acquire(env.dataDir), shutdown = new AbortController();
   const limiter = new SlidingLogLimiter(systemClock);
   let server: ReturnType<typeof serve> | undefined, runner: Runner | undefined, stopping = false, ready = false;
+  let stopTask: Promise<void> | undefined, deadline: ReturnType<typeof setTimeout> | undefined;
+  let finishLifetime!: () => void;
+  const lifetime = new Promise<void>(resolve => { finishLifetime = resolve; });
+  const armShutdownDeadline = () => {
+    deadline ??= setTimeout(() => { console.error('shutdown_deadline; ownership not cleanly released'); process.exit(1); }, SHUTDOWN_MS);
+  };
   const stop = async () => {
     if (stopping) return; stopping = true;
-    const deadline = setTimeout(() => { console.error('shutdown_deadline; owner lock retained'); process.exit(1); }, SHUTDOWN_MS); deadline.unref();
+    runner?.stopAdmission(); // First close admission, then cancel and join every reservation/work promise.
+    armShutdownDeadline();
     shutdown.abort();
     try {
-      if (server) await new Promise<void>((resolve, reject) => server!.close(error => error ? reject(error) : resolve()));
-      await runner?.drain(); limiter.dispose(); await store.close(); clearTimeout(deadline);
-    } catch { console.error('shutdown_failed; owner lock retained'); process.exitCode = 1; }
+      const listener = new Promise<void>((resolve, reject) => {
+        if (server) server.close(error => error ? reject(error) : resolve()); else resolve();
+      });
+      // A listener-close error must not bypass the owned-work join (or vice versa).
+      const joined = await Promise.allSettled([listener, runner?.drain() ?? Promise.resolve()]);
+      limiter.dispose();
+      if (joined.some(result => result.status === 'rejected')) throw new Error('shutdown_join_failed');
+      await store.close(); clearTimeout(deadline);
+    } catch { console.error('shutdown_failed; owner lock release not confirmed'); process.exitCode = 1; }
+    finally { finishLifetime(); }
   };
-  for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, () => { shutdown.abort(); if (ready) void stop(); });
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, () => {
+    runner?.stopAdmission(); shutdown.abort(); armShutdownDeadline();
+    if (ready) stopTask ??= stop(); // Retained until the root lifetime joins it below.
+  });
   try {
     // No work from a previous owner is live: lock acquisition preceded this finite cleanup.
     await rm(store.path('tmp'), { recursive: true, force: true });
@@ -67,13 +84,21 @@ async function main(): Promise<void> {
       },
     });
     // Startup recovery is awaited; all admitted resumptions are GET/download only.
-    if (recovery.resume.length) await runner.runBatch(recovery.resume, true);
-    if (shutdown.signal.aborted) { await stop(); return; }
+    for (const id of recovery.resume) {
+      if (shutdown.signal.aborted) break;
+      await runner.resume(id);
+    }
+    if (shutdown.signal.aborted) { stopTask ??= stop(); await stopTask; return; }
     ready = true;
     server = serve({ fetch: createApp(env, { store, runner, signal: shutdown.signal }).fetch, hostname: '127.0.0.1', port: env.port });
+    await lifetime;
+    await stopTask;
   } catch (error) {
     // Keep the owner lock on startup failure: recovery is manual and quiescent.
-    shutdown.abort(); limiter.dispose(); await runner?.drain().catch(() => undefined); throw error;
+    runner?.stopAdmission(); shutdown.abort(); armShutdownDeadline(); limiter.dispose();
+    try { await runner?.drain(); }
+    catch { console.error('startup_drain_failed; owner lock retained'); }
+    clearTimeout(deadline); throw error;
   }
 }
 main().catch(error => {

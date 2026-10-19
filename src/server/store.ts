@@ -7,10 +7,15 @@ import { assertStoreBounds, emptyState } from '../youcam/workflow-state.js';
 import type { WorkflowState } from '../youcam/workflow-state.js';
 const stateSchema = z.object({ version: z.literal(1), seq: z.number().int().nonnegative(), observing: z.boolean(), preflight: PreflightRecordSchema.nullable(), photos: z.array(StoredPhotoSchema), qualities: z.array(QualityReportSchema), listings: z.array(ListingSchema), jobs: z.array(TryOnJobSchema), images: z.array(GeneratedImageSchema), ledger: z.array(LedgerEntrySchema), requests: z.array(z.object({ requestId: z.uuidv4(), bodyKey: z.string(), jobIds: z.array(z.string()) })), batches: z.array(z.object({ requestId: z.uuidv4(), jobIds: z.array(z.string()), deadlineAt: z.iso.datetime() })), recoveries: z.array(ArtifactRecoverySchema), buyers: z.array(z.object({ id: z.string(), expiresAt: z.iso.datetime(), photoIds: z.array(z.string()), imageIds: z.array(z.string()), jobIds: z.array(z.string()) })), receipts: z.array(DeletionReceiptSchema) });
 export class StoreLocked extends Error { readonly exitCode = 3; constructor() { super('data dir locked. See README Recovering a stale data-dir lock'); } }
+export type CommitStage = 'temporary_open' | 'temporary_write' | 'temporary_sync' | 'temporary_close' | 'rename' | 'directory_sync';
+export class StoreCommitError extends Error {
+  constructor(readonly stage: CommitStage, readonly outcome: 'not_committed' | 'unknown') { super(outcome === 'unknown' ? 'store_commit_unknown' : 'store_commit_failed'); }
+}
 export interface StateStore { snapshot(): WorkflowState; commit(change: (state: WorkflowState) => WorkflowState): Promise<WorkflowState> }
 export class Store implements StateStore {
   private readonly directory: string; private readonly lockId: string;
-  private state: WorkflowState; private tail: Promise<unknown> = Promise.resolve(); private closed = false; private poisoned = false;
+  private state: WorkflowState; private tail: Promise<unknown> = Promise.resolve(); private closed = false;
+  private failure: StoreCommitError | null = null;
   private constructor(directory: string, lockId: string, state: WorkflowState) { this.directory = directory; this.lockId = lockId; this.state = state; }
   static async acquire(directory: string): Promise<Store> {
     const root = resolve(directory); await mkdir(root, { recursive: true });
@@ -32,21 +37,35 @@ export class Store implements StateStore {
     return new Store(root, lockId, state);
   }
   snapshot(): WorkflowState { return structuredClone(this.state); }
+  assertWritable(): void {
+    if (this.failure) throw this.failure;
+    if (this.closed) throw new Error('store_closed');
+  }
   commit(change: (state: WorkflowState) => WorkflowState): Promise<WorkflowState> {
     const result = this.tail.then(async () => {
-      if (this.closed || this.poisoned) throw new Error('store_closed');
+      this.assertWritable();
       const next = change(this.snapshot()); assertStoreBounds(next);
       if (JSON.stringify(next) === JSON.stringify(this.state)) return this.snapshot();
       next.seq = this.state.seq + 1;
       stateSchema.parse(next);
       const body = JSON.stringify(next); if (Buffer.byteLength(body) > 32 * 1024 * 1024) throw new Error('state_too_large');
       // Admission rejection throws before this point: no write, seq or partial batch.
-      const temporary = await open(join(this.directory, 'state.json.tmp'), 'w', 0o600);
+      let stage: CommitStage = 'temporary_open';
+      let temporary: Awaited<ReturnType<typeof open>> | undefined;
       try {
-        await temporary.writeFile(body); await temporary.sync(); await temporary.close();
-        await rename(join(this.directory, 'state.json.tmp'), join(this.directory, 'state.json')); await syncDirectory(this.directory);
+        temporary = await open(join(this.directory, 'state.json.tmp'), 'w', 0o600);
+        stage = 'temporary_write'; await temporary.writeFile(body);
+        stage = 'temporary_sync'; await temporary.sync();
+        stage = 'temporary_close'; await temporary.close(); temporary = undefined;
+        stage = 'rename'; await rename(join(this.directory, 'state.json.tmp'), join(this.directory, 'state.json'));
+        stage = 'directory_sync'; await syncDirectory(this.directory);
         this.state = next; return this.snapshot();
-      } catch (error) { this.poisoned = true; await temporary.close().catch(() => undefined); throw error; }
+      } catch {
+        // A rename rejection is conservatively unknown too. Never infer disk truth from memory.
+        this.failure = new StoreCommitError(stage, stage === 'rename' || stage === 'directory_sync' ? 'unknown' : 'not_committed');
+        if (temporary) await temporary.close().catch(() => undefined);
+        throw this.failure;
+      }
     });
     this.tail = result.catch(() => undefined); return result;
   }
@@ -64,7 +83,7 @@ export class Store implements StateStore {
   async cleanTmp(id: string): Promise<void> { if (!/^[0-9a-z]{20}$/.test(id)) throw new Error('invalid_id'); await rm(this.path(`tmp/${id}`), { recursive: true, force: true }); }
   async close(): Promise<void> {
     this.closed = true; await this.tail;
-    if (this.poisoned) return; // Uncertain durability keeps the lock; no new owner while work is unresolved.
+    if (this.failure) throw this.failure; // Failed/unknown durability retains ownership and cannot report a clean close.
     const path = join(this.directory, '.owner.lock');
     let own = false;
     try { own = JSON.parse(await readFile(path, 'utf8')).lockId === this.lockId; } catch { /* preserve mismatching/partial/missing lock */ }

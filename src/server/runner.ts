@@ -6,10 +6,12 @@ import type { YouCamClient } from '../youcam/client.js';
 import { YouCamError } from '../youcam/client.js';
 import { bounded, checkSignal, systemClock } from '../youcam/operations.js';
 import type { Clock } from '../youcam/operations.js';
-import { DOWNLOAD_TIMEOUT_MS, FILE_POST_TIMEOUT_MS, GET_TIMEOUT_MS, MAX_SLOT_REFRESHES, MAX_UPLOAD_TRIES, PUT_TIMEOUT_MS, UPLOAD_PHASE_MS, attemptDeadlineMs } from '../youcam/limits.js';
+import { DOWNLOAD_PHASE_MS, DOWNLOAD_TIMEOUT_MS, FILE_POST_TIMEOUT_MS, GET_TIMEOUT_MS, MAX_SLOT_REFRESHES, MAX_UPLOAD_TRIES, PUT_TIMEOUT_MS, UPLOAD_PHASE_MS, attemptDeadlineMs } from '../youcam/limits.js';
 import { markPostCommitment } from '../youcam/workflow-state.js';
 import type { SlidingLogLimiter } from '../youcam/rate-limiter.js';
 import type { Store } from './store.js';
+import { OwnedRuntime, RuntimeRefused } from './owned-runtime.js';
+import type { RuntimeReceipt } from './owned-runtime.js';
 export interface RunnerOptions {
   store: Store; limiter: SlidingLogLimiter; signal: AbortSignal; taskDeadlineMs: number; clock?: Clock;
   client: (job: TryOnJob) => YouCamClient;
@@ -18,28 +20,55 @@ export interface RunnerOptions {
 /** Single attempt slot, distinct from the transport's two-socket limit. No untracked work. */
 export class Runner {
   private readonly options: RunnerOptions; private readonly clock: Clock;
-  private tail: Promise<unknown> = Promise.resolve(); private queued = 0;
+  private readonly runtime: OwnedRuntime;
   private readonly controllers = new Map<string, AbortController>();
-  constructor(options: RunnerOptions) { this.options = options; this.clock = options.clock ?? systemClock; }
-  cancel(id: string): void { this.controllers.get(id)?.abort(); }
-  async drain(): Promise<void> { await this.tail; }
-  runBatch(ids: string[], recovery = false): Promise<void> {
-    if (this.queued >= 32) return Promise.reject(new Error('runner_queue_full'));
-    this.queued++;
-    const result = this.tail.then(async () => { for (const id of ids) await this.run(id, recovery); });
-    this.tail = result.catch(() => undefined);
-    return result.finally(() => { this.queued--; });
+  constructor(options: RunnerOptions) {
+    this.options = options; this.clock = options.clock ?? systemClock;
+    this.runtime = new OwnedRuntime(async (ids, signal) => { for (const id of ids) await this.run(id, signal); });
   }
-  private async run(id: string, recovery: boolean): Promise<void> {
+  status() { return this.runtime.status(); }
+  assertAdmissionOpen(): void {
+    this.options.store.assertWritable(); this.runtime.assertOpen();
+    if (this.options.signal.aborted) throw new RuntimeRefused('runner_closed');
+  }
+  stopAdmission(): void { this.runtime.stopAdmission(); }
+  cancel(id: string): void { this.controllers.get(id)?.abort(); }
+  async drain(): Promise<void> { await this.runtime.drain(); }
+  admit<T>(commit: () => Promise<RuntimeReceipt<T>>, definitiveRefusal: (error: unknown) => boolean): Promise<T> {
+    this.assertAdmissionOpen();
+    return this.runtime.admit(commit, definitiveRefusal);
+  }
+  /** Startup already reconciled these jobs durably. They must have a task ID; never POST. */
+  async resume(id: string): Promise<void> {
+    const attempt = this.options.store.snapshot().jobs.find(job => job.id === id)?.attempts.at(-1);
+    if (!attempt?.taskId || !['polling', 'downloading'].includes(attempt.state) || !attempt.attemptDeadlineAt) throw new Error('unsafe_resume');
+    await this.admit(async () => ({ value: undefined, jobIds: [id], replay: false }), () => false);
+    await this.drain();
+  }
+  private async run(id: string, batchSignal: AbortSignal): Promise<void> {
     const { store, limiter } = this.options, clock = this.clock;
     const initial = store.snapshot().jobs.find(j => j.id === id);
     if (!initial || isTerminal(initial.attempts.at(-1)!)) return;
+    const recovery = initial.attempts.at(-1)!.state !== 'queued';
+    if (recovery && (!initial.attempts.at(-1)!.taskId || !['polling', 'downloading'].includes(initial.attempts.at(-1)!.state))) throw new Error('unsafe_resume');
     const batch = store.snapshot().batches.findLast(b => b.jobIds.includes(id));
     if (!batch) throw new Error('batch_missing');
     const controller = new AbortController(); this.controllers.set(id, controller);
-    const parent = AbortSignal.any([this.options.signal, controller.signal]);
+    const parent = AbortSignal.any([this.options.signal, batchSignal, controller.signal]);
     const now = () => new Date(clock.now()).toISOString();
     const current = () => store.snapshot().jobs.find(j => j.id === id)!;
+    const requestAllowed = (signal: AbortSignal, kind: RequestKind): void => {
+      checkSignal(signal); store.assertWritable();
+      if (this.runtime.status().fence) throw new Error('runner_fenced');
+      const a = current().attempts.at(-1)!, time = clock.now();
+      const downloadStart = a.history.find(h => h.to === 'downloading' && h.from !== 'downloading');
+      if (isTerminal(a)) throw new YouCamError('aborted');
+      if (time >= Date.parse(batch.deadlineAt) || a.attemptDeadlineAt && time >= Date.parse(a.attemptDeadlineAt)
+        || kind === 'task_get' && a.deadlineAt && time >= Date.parse(a.deadlineAt)
+        || ['file_post', 'upload_put'].includes(kind) && a.uploadsStartedAt && time >= Date.parse(a.uploadsStartedAt) + UPLOAD_PHASE_MS
+        || downloadStart && ['task_get', 'download'].includes(kind) && time >= Date.parse(downloadStart.at) + DOWNLOAD_PHASE_MS) throw new YouCamError('timeout');
+      if (recovery && !['task_get', 'download'].includes(kind)) throw new Error('unsafe_resume');
+    };
     const sendEvent = async (event: Event): Promise<Effect[]> => {
       let effects: Effect[] = [];
       await store.commit(state => {
@@ -63,15 +92,18 @@ export class Runner {
         const grant = async (kind: RequestKind, notBefore = clock.now(), grantSignal = signal): Promise<Effect[]> => {
           if (notBefore > clock.now()) await clock.sleep(notBefore - clock.now(), grantSignal);
           checkSignal(grantSignal);
-          try { await limiter.acquire(grantSignal); checkSignal(grantSignal); return await sendEvent({ type: 'limiter_granted', request: kind }); }
-          catch (error) { if (grantSignal.aborted) throw error; return sendEvent({ type: 'limiter_failed' }); }
+          try { await limiter.acquire(grantSignal); }
+          catch (error) { store.assertWritable(); if (grantSignal.aborted) throw error; return sendEvent({ type: 'limiter_failed' }); }
+          checkSignal(grantSignal);
+          // A failed intent commit is not a limiter failure and must never produce a request.
+          return sendEvent({ type: 'limiter_granted', request: kind });
         };
         const uploadRequest = async <T>(kind: 'file_post' | 'upload_put', work: (signal: AbortSignal) => Promise<T>, uploadSignal: AbortSignal, ms: number): Promise<T> => {
           const effects = await sendEvent({ type: 'request_upload', request: kind });
           if (!effects.some(e => e.type === 'request_grant')) throw new YouCamError('aborted');
           const granted = await grant(kind, clock.now(), uploadSignal);
           if (!granted.some(e => e.type === 'request' && e.request === kind)) throw new YouCamError('aborted');
-          try { return await bounded(uploadSignal, ms, work, clock); }
+          try { requestAllowed(uploadSignal, kind); return await bounded(uploadSignal, ms, s => { requestAllowed(s, kind); return work(s); }, clock); }
           finally { await sendEvent({ type: 'upload_request_finished' }); }
         };
         const upload = async (photo: StoredPhoto, uploadSignal: AbortSignal): Promise<string> => {
@@ -82,13 +114,14 @@ export class Runner {
             let slot: Awaited<ReturnType<YouCamClient['createUpload']>> | undefined;
             for (let n = 0; n < MAX_UPLOAD_TRIES; n++) {
               try { slot = await uploadRequest('file_post', s => client.createUpload({ contentType: 'image/jpg', fileName: `${photo.id}.jpg`, fileSize: bytes.length }, { signal: s }), uploadSignal, FILE_POST_TIMEOUT_MS); break; }
-              catch (error) { if (uploadSignal.aborted || n === MAX_UPLOAD_TRIES - 1 || error instanceof YouCamError && (error.kind === 'policy' || error.http === 401)) throw error; await clock.sleep(1000 * 2 ** n, uploadSignal); }
+              catch (error) { store.assertWritable(); if (uploadSignal.aborted || !(error instanceof YouCamError) || n === MAX_UPLOAD_TRIES - 1 || error.kind === 'policy' || error.http === 401) throw error; await clock.sleep(1000 * 2 ** n, uploadSignal); }
             }
             if (!slot) throw new YouCamError('parse');
             let refresh = false;
             for (let n = 0; n < MAX_UPLOAD_TRIES; n++) {
               try { await uploadRequest('upload_put', s => client.putBytes(slot!.put, bytes, { signal: s }), uploadSignal, PUT_TIMEOUT_MS); return slot.fileId; }
               catch (error) {
+                store.assertWritable(); if (!(error instanceof YouCamError)) throw error;
                 if (error instanceof YouCamError && error.http === 403 && refreshes < MAX_SLOT_REFRESHES) { refreshes++; refresh = true; break; }
                 if (uploadSignal.aborted || n === MAX_UPLOAD_TRIES - 1 || error instanceof YouCamError && error.kind === 'policy') throw error;
                 await clock.sleep(1000 * 2 ** n, uploadSignal);
@@ -107,7 +140,7 @@ export class Runner {
             if (!src || !ref) throw new YouCamError('parse');
             const files = await bounded(signal, UPLOAD_PHASE_MS, async uploadSignal => ({ src: await upload(src, uploadSignal), ref: await upload(ref, uploadSignal) }), clock);
             effects = await sendEvent({ type: 'uploads_ok', srcFileId: files.src, refFileId: files.ref });
-          } catch (error) { if (signal.aborted) throw error; await sendEvent({ type: 'upload_failed' }); return; }
+          } catch (error) { store.assertWritable(); if (signal.aborted || !(error instanceof YouCamError)) throw error; await sendEvent({ type: 'upload_failed' }); return; }
         } else {
           // recoverState has already durably installed a GET grant; no upload or POST recovery path.
           effects = [{ type: 'request_grant', request: 'task_get', notBefore: clock.now() }];
@@ -121,21 +154,25 @@ export class Runner {
           else if (effect.type === 'request') {
             const job = current(), a = job.attempts.at(-1)!;
             if (effect.request === 'task_post') {
-              try { const result = await bounded(signal, FILE_POST_TIMEOUT_MS, s => client.createClothTask({ ...job.request, src_file_id: a.srcFileId!, ref_file_id: a.refFileId! }, { signal: s }), clock); next = await sendEvent({ type: 'task_created', taskId: result.taskId }); }
+              try { requestAllowed(signal, 'task_post'); const result = await bounded(signal, FILE_POST_TIMEOUT_MS, s => { requestAllowed(s, 'task_post'); return client.createClothTask({ ...job.request, src_file_id: a.srcFileId!, ref_file_id: a.refFileId! }, { signal: s }); }, clock); next = await sendEvent({ type: 'task_created', taskId: result.taskId }); }
               catch (error) {
+                store.assertWritable();
+                if (!(error instanceof YouCamError)) throw error;
                 if (signal.aborted) throw error;
                 next = await sendEvent(error instanceof YouCamError && error.kind === 'http' && error.http !== undefined ? { type: 'post_response', http: error.http, ...(error.errorCode ? { errorCode: error.errorCode } : {}) } : { type: error instanceof YouCamError && error.kind === 'parse' ? 'post_parse_error' : error instanceof YouCamError && error.kind === 'timeout' ? 'post_timeout' : 'post_transport_error' });
               }
             } else if (effect.request === 'task_get') {
               try {
-                const result = await bounded(signal, GET_TIMEOUT_MS, s => client.getClothTask(a.taskId!, { signal: s }), clock);
+                requestAllowed(signal, 'task_get');
+                const result = await bounded(signal, GET_TIMEOUT_MS, s => { requestAllowed(s, 'task_get'); return client.getClothTask(a.taskId!, { signal: s }); }, clock);
                 if (result.status === 'success' && result.resultUrl) { resultUrl = result.resultUrl; next = await sendEvent({ type: 'poll_success', url: resultUrl }); }
                 else next = await sendEvent(result.status === 'error' ? { type: 'poll_error', code: result.engineError ?? 'unknown_internal_error' } : result.status === 'success' ? { type: 'get_error' } : { type: 'poll_running' });
-              } catch (error) { if (signal.aborted) throw error; next = await sendEvent({ type: 'get_error' }); }
+              } catch (error) { store.assertWritable(); if (signal.aborted || !(error instanceof YouCamError)) throw error; next = await sendEvent({ type: 'get_error' }); }
             } else if (effect.request === 'download') {
               try {
                 if (!resultUrl) throw new YouCamError('parse');
-                const bytes = await bounded(signal, DOWNLOAD_TIMEOUT_MS, s => client.download(resultUrl!, { signal: s }), clock);
+                requestAllowed(signal, 'download');
+                const bytes = await bounded(signal, DOWNLOAD_TIMEOUT_MS, s => { requestAllowed(s, 'download'); return client.download(resultUrl!, { signal: s }); }, clock);
                 const disclosed = await this.options.disclose(bytes, job, signal); checkSignal(signal);
                 const { bytes: output, ...image } = disclosed;
                 await store.writeMedia(image.disclosedPath, output); checkSignal(signal);
@@ -146,7 +183,7 @@ export class Runner {
                   return state;
                 });
                 next = await sendEvent({ type: 'downloaded' });
-              } catch (error) { if (signal.aborted) throw error; next = await sendEvent({ type: 'download_failed', expired: error instanceof YouCamError && (error.http === 403 || error.http === 410) }); }
+              } catch (error) { store.assertWritable(); if (signal.aborted || !(error instanceof YouCamError)) throw error; next = await sendEvent({ type: 'download_failed', expired: error.http === 403 || error.http === 410 }); }
             }
           }
           effects.push(...next);
@@ -154,7 +191,8 @@ export class Runner {
         if (!isTerminal(current().attempts.at(-1)!)) await sendEvent({ type: 'attempt_deadline' });
       }, clock);
     } catch (error) {
-      if (controller.signal.aborted || this.options.signal.aborted) await sendEvent({ type: 'cancel' });
+      store.assertWritable();
+      if (parent.aborted) await sendEvent({ type: 'cancel' });
       else await sendEvent({ type: 'attempt_deadline' });
       if (!(error instanceof YouCamError) && !(error instanceof Error && error.message === 'aborted')) throw error;
     } finally { this.controllers.delete(id); await store.cleanTmp(id); }
