@@ -51,8 +51,8 @@ export class SellerApi {
   async call<T>(path: string, method = 'GET', body?: unknown, valid: (value: R) => boolean = () => false): Promise<T> {
     if (!/^\/api\/[a-z0-9/_-]+$/.test(path) || !['127.0.0.1', 'localhost'].includes(location.hostname) || location.protocol !== 'http:') throw new ApiError('origin_refused');
     const mutation = method !== 'GET';
-    // The frozen route replies after completion, without prompt admission IDs or
-    // an owned-runner admission contract. No browser admission transport is allowed.
+    // Owned server admission is under end-to-end validation. Keep browser admission
+    // blocked until durable IDs, progress and cancellation are verified together.
     if (mutation && /\/(?:tryon|retry)(?:\/|$)/.test(path)) throw new ApiError('admission_contract_unavailable');
     if (mutation && !this.verifiedFixture) throw new ApiError('fixture_required');
     const controller = new AbortController(); this.active.add(controller);

@@ -129,7 +129,7 @@ export const UI_COPY = {
   selectModels: 'Choose one or two synthetic models', synthetic: 'Synthetic demo mannequin', selected: 'selected',
   generate: 'Review demo request', costTitle: 'Confirm this fixture request', costBody: 'This is a simulated fixture request. It sends no live YouCam task and its confirmed cost is 0 units.',
   confirm: 'Confirm demo request', cancel: 'Cancel', modalContext: 'Review the saved listing, original photo and model selection below before confirming a request.',
-  admissionUnavailable: 'Demo admission is disabled. The current server replies only after completion (at least 20 seconds for the default fixture), beyond this client’s 15-second deadline. Prompt durable job IDs and a reviewed owned-runner contract are missing. New requests stay disabled until that contract supports progress and explicit cancel. Existing known jobs can still be read and cancelled; cancelling a browser request does not cancel a server job.',
+  admissionUnavailable: 'Demo admission is disabled while the new durable job admission, progress and cancel flow is being validated end to end. Existing known jobs can still be read and cancelled; cancelling a browser request does not cancel a server job.',
   photoReplace: 'Choosing a new photo replaces the first original when you save. Other saved originals are retained.',
   readKnownJob: 'Read known job for selected listing',
   original: 'Original', modelCount: 'Models', request: 'Request ID',
