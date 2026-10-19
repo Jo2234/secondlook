@@ -1,0 +1,30 @@
+# R34 terminal admission/reconciliation publication — source only
+
+Parent: `1cf1197e18d90fff6dc8a59770d56de5c454003b`, preserved on `codex/resume-20261019-youcam-fixture-admission-ui-r30`. Frozen main: `7cde7ef1a13597519a28d7f58765c3a71238f3c8`. R34 branch: `codex/resume-20261019-youcam-terminal-reconciliation-ui-r34`.
+
+R31-P2-01 identifies actual React wiring: POST acceptance and original-UUID reconciliation installed correlated jobs but depended on the active-only poll for listing/units publication. Already terminal jobs never started that poll, leaving the selected saved listing, result gallery and ledger stale.
+
+`App.tsx` now awaits one shared `publishAcceptedJobs` path after either handler's successful `FixtureAdmission.found`. The controller still validates original request/listing/photo/model/category/order and retained job IDs before this helper runs. The helper checks mounted state, the action generation and the selected listing against the frozen review, installs the accepted jobs, then reads exactly one selected listing and one units response through the unchanged bounded SellerApi. Its second fence precedes all ancillary publication. SellerApi correlates the listing response ID to the requested ID and requires fixture mode. Successful reads publish the selected saved listing, its existing listing card and units together. No active-state condition gates this snapshot, so direct terminal success and terminal found both receive it.
+
+Selection changes increment generation; actions also own a generation and block selection while working. The helper's captured selected ID plus generation fences prevent a stale read from replacing a different selection, including selection away and back. Cleanup increments generation, clears mounted state and disposes this component's API requests. A reconcile for a different selected listing may resolve controller ownership but does not install that listing's jobs or snapshot into the current selection.
+
+The handlers clear UI uncertainty after valid acceptance and before ancillary reads. Jobs are installed before awaiting those reads. If either ancillary GET fails, no partial listing/units snapshot is published; the ordinary action error remains visible. Existing controller `fail` and `missing` do not demote accepted ownership or erase original identity. Repeating explicit same-UUID reconciliation can collect the snapshot later without a replacement POST. Existing polling, known-job refresh and cancel acknowledgement publication are unchanged; cancel already installs the acknowledged job before its refresh. No additional job GET, POST, retry, UUID, server/schema change or policy change is introduced.
+
+Only `src/web/App.tsx` and this new decision document change. The production controller, API, server and all 30 existing pure cases/assertions are byte-retained. No pure helper or additional test is necessary to express this App-only repair; the pure suite does not prove React publication.
+
+## Evidence boundary
+
+R32 full strict PASS with zero diagnostics and R33 pure 30/30 PASS at exact `1cf1197e18d90fff6dc8a59770d56de5c454003b` are separate historical tested-byte receipts supplied by the parent. R31's UNRUN wording describes that reviewer's execution boundary, not cancellation of those receipts. The changed R34 candidate is entirely **UNRUN**: no check, target import, parser, test, typecheck, build, browser, server or integration execution is authorized or performed here. Source reasoning is not runtime acceptance. RG2 remains open and external; no final contest pass is asserted.
+
+The existing server request has no expected-revision field. Client pre-POST GET is not atomic compare-and-swap; page-module memory survives ordinary remounts, not reloads. Cross-tab/revision/durable recovery remains outside this repair and stopped for separate contract review. Existing unknown-identity rules and closed live/buyer/retry/artifact-recovery paths remain unchanged.
+
+## Future App integration cases — proposals only, require separate authority
+
+1. Terminal found: lose the original POST response, retain unknown R, let original jobs complete, then explicit GET of R returns correlated succeeded jobs. Verify saved listing results, gallery, existing listing card and settled ledger update without manual known-job refresh or another POST/UUID.
+2. Direct terminal success: original generate returns correlated terminal succeeded jobs. Verify the same publication even though the active-only poll does not start.
+3. For both handlers, fail listing GET and then independently fail units GET after acceptance. Verify accepted identity and adopted jobs remain, uncertainty stays cleared, an error is visible and neither half of the ancillary snapshot publishes. A later same-UUID reconciliation may recover; no replacement POST occurs.
+4. Unmount or invalidate generation while ancillary reads are pending; resolve them late. Verify no stale publication. Reconcile original R while another listing is selected; retain controller acceptance without replacing that listing's jobs, saved data or ledger via this helper.
+5. Nonterminal one/two-model acceptance still collects one initial snapshot and then uses existing polling through completion, without poll ownership restarting for each fetched array. Existing cancellation acknowledgement survives failed refresh; known-job refresh preserves its existing identity checks.
+6. Missing/malformed/mismatched original-request lookup retains unknown ownership and never enters this publication path or authorizes another POST. Previously accepted later lookup failure retains the known IDs.
+
+Parent collects and reviews this finite source handoff, owns any later grants and supported T3 settlement after ended/no-active/pending-zero, and decides integration. This child does not grant checks, merge main, write reservations, publish/submit, export source/conversation or self-settle. Report-only delivery is saved for automatic main-Mac copying; transfer is not verified.

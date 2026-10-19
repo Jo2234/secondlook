@@ -100,6 +100,16 @@ export function App() {
     setJobs(snapshot.next); setUnits(snapshot.u);
     if (snapshot.l) { const listing = snapshot.l; setSaved(listing); setListings(old => old.map(l => l.id === listing.id ? listing : l)); }
   }
+  async function publishAcceptedJobs(r: FixtureReview, accepted: TryOnJob[], ownerGeneration: number) {
+    const current = () => mounted.current && generation.current === ownerGeneration && saved?.id === r.listingId;
+    if (!current()) return;
+    // Acceptance survives ancillary read failure; terminal jobs cannot rely on the active-only poll.
+    setJobs(accepted);
+    const [listing, ledger] = await Promise.all([api.listing(r.listingId), api.units()]);
+    if (!current()) return;
+    setSaved(listing); setUnits(ledger);
+    setListings(old => old.map(l => l.id === listing.id ? listing : l));
+  }
   const jobIdsKey = jobs.map(job => job.id).join(',');
   // Poll ownership depends on ID/selection/action identity, never each fetched array.
   // A tick collects jobs, units and listing before one guarded publication.
@@ -183,7 +193,10 @@ export function App() {
         const result = await api.generate(r);
         const accepted = fixtureAdmission.found(r, result);
         if (!accepted) throw new ApiError('admission_identity_mismatch', true);
-        if (mounted.current && generation.current === started) { setJobs(accepted); setReview(null); setUnknown(false); }
+        if (mounted.current && generation.current === started) {
+          setReview(null); setUnknown(false);
+          await publishAcceptedJobs(r, accepted, started);
+        }
       } catch (e) {
         fixtureAdmission.fail(r, e instanceof ApiError && !e.uncertain ? e.status : null, e instanceof ApiError ? e.code : 'admission_unknown');
         if (mounted.current) { setReview(null); if (fixtureAdmission.snapshot().phase === 'unknown') setUnknown(true); }
@@ -203,7 +216,7 @@ export function App() {
         if (mounted.current && generation.current === started) {
           if (state.phase === 'unknown') setUnknown(false);
           // Read-only resolution may outlive a selection; never replace another listing.
-          if (saved?.id === r.listingId) setJobs(accepted);
+          await publishAcceptedJobs(r, accepted, started);
         }
       } catch (e) {
         fixtureAdmission.missing(r); // 404, malformed and unavailable reads all retain uncertainty.
