@@ -14,6 +14,25 @@ export class StoreCommitError extends Error {
   constructor(readonly stage: CommitStage, readonly outcome: 'not_committed' | 'unknown') { super(outcome === 'unknown' ? 'store_commit_unknown' : 'store_commit_failed'); }
 }
 export interface StateStore { snapshot(): WorkflowState; commit(change: (state: WorkflowState) => WorkflowState): Promise<WorkflowState> }
+export type PreparedStoreCommit = { changed: false; next: WorkflowState }
+  | { changed: true; next: WorkflowState; body: string; size: number };
+/** Pure preparation: no reservation, state publication or IO, including on rejection. */
+export function prepareStoreCommit(current: WorkflowState, change: (state: WorkflowState) => WorkflowState, cap: number): PreparedStoreCommit {
+  const next = change(structuredClone(current)); assertStoreBounds(next);
+  if (JSON.stringify(next) === JSON.stringify(current)) return { changed: false, next: structuredClone(current) };
+  next.seq = current.seq + 1; stateSchema.parse(next);
+  const body = JSON.stringify(next), size = Buffer.byteLength(body);
+  if (size > cap) throw new Error('state_too_large');
+  return { changed: true, next, body, size };
+}
+/** Preparation and publication run in one serialized turn; no error-identity classification. */
+export function serializeStoreCommit(previous: Promise<unknown>, prepare: () => PreparedStoreCommit,
+  publish: (prepared: Extract<PreparedStoreCommit, { changed: true }>) => Promise<WorkflowState>): Promise<WorkflowState> {
+  return previous.then(() => {
+    const prepared = prepare();
+    return prepared.changed ? publish(prepared) : prepared.next;
+  });
+}
 
 /** Fixed data only. These are logical Store reservations, NOT native/physical disk or RSS limits. */
 export interface CheckpointStorePolicy {
@@ -75,11 +94,25 @@ export class RetainedStoreIO<H extends Closable> {
   remember(operation: StoreIOOperation, error: unknown): void { this.faults.push({ operation, error }); residentIOOwners.add(this); }
   capture(handle: H): H { if (!this.handles.has(handle)) this.handles.set(handle, {}); return handle; }
   run<T>(operation: StoreIOOperation, work: () => T | PromiseLike<T>): Promise<T> {
-    let record!: RetainedOperation;
     const task = Promise.resolve().then(() => {
       if (this.released) throw new StoreIOError(operation);
       return work();
     });
+    return this.retain(operation, task);
+  }
+  /** Already-prepared commit only: publish before immediate invocation, with no admission/IO gap. */
+  startCommit<T>(work: () => T | PromiseLike<T>): Promise<T> {
+    let resolveTask!: (value: T | PromiseLike<T>) => void, rejectTask!: (error: unknown) => void;
+    const task = new Promise<T>((resolve, reject) => { resolveTask = resolve; rejectTask = reject; });
+    const observed = this.retain('commit', task);
+    try {
+      if (this.released) throw new StoreIOError('commit');
+      resolveTask(work());
+    } catch (error) { rejectTask(error); }
+    return observed;
+  }
+  private retain<T>(operation: StoreIOOperation, task: Promise<T>): Promise<T> {
+    let record!: RetainedOperation;
     const observed = task.then(value => value, error => {
       record.error = error; this.remember(operation, error);
       if (error instanceof StoreCommitError || error instanceof StoreLocked || error instanceof StoreIOError) throw error;
@@ -157,6 +190,14 @@ function sameIdentity(a: BigIntStats, b: BigIntStats): boolean {
 function regular(s: BigIntStats, cap: number): void {
   if (!s.isFile() || s.nlink !== 1n || s.size < 0n || s.size > BigInt(cap)) throw new Error('store_read_metadata');
 }
+/** Numeric primitive presence is required; missing safe flags never become zero. */
+export function ownedStoreReadFlags(flags: { O_RDONLY?: number; O_NOFOLLOW?: number; O_NONBLOCK?: number }): number {
+  const { O_RDONLY, O_NOFOLLOW, O_NONBLOCK } = flags;
+  if (typeof O_RDONLY !== 'number' || !Number.isInteger(O_RDONLY)
+    || typeof O_NOFOLLOW !== 'number' || !Number.isInteger(O_NOFOLLOW)
+    || typeof O_NONBLOCK !== 'number' || !Number.isInteger(O_NONBLOCK)) throw new Error('store_read_flags_unsupported');
+  return O_RDONLY | O_NOFOLLOW | O_NONBLOCK;
+}
 export class StoreIOOwner extends RetainedStoreIO<FileHandle> {
   readonly budget: StoreWriteBudget | undefined;
   readonly checkpoint: Readonly<CheckpointStorePolicy> | undefined;
@@ -184,13 +225,14 @@ export class StoreIOOwner extends RetainedStoreIO<FileHandle> {
   }
   async readOwned(path: string, cap: number, expected?: BigIntStats, optional = false): Promise<Uint8Array | undefined> {
     return this.run('read', async () => {
+      const flags = ownedStoreReadFlags(constants);
       let pre: BigIntStats;
       try { pre = await lstat(path, { bigint: true }); }
       catch (error) { if (optional && (error as NodeJS.ErrnoException).code === 'ENOENT') return undefined; throw error; }
       regular(pre, cap);
       if (expected && !sameIdentity(expected, pre)) throw new Error('store_read_identity');
       if (await realpath(path) !== resolve(path)) throw new Error('store_read_alias');
-      const file = this.capture(await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0)));
+      const file = this.capture(await open(path, flags));
       // No fallible work between actual open fulfillment and capture.
       const bytes = await this.use(file, 'read', async handle => {
         const before = await handle.stat({ bigint: true }); regular(before, cap);
@@ -257,18 +299,14 @@ export class Store implements StateStore {
     this.io.assertHealthy();
   }
   commit(change: (state: WorkflowState) => WorkflowState): Promise<WorkflowState> {
-    // Publish in IO before invoking work, preserving the original serialized commit tail.
     const previous = this.tail;
-    const result = this.io.run('commit', async () => { await previous; return this.commitWork(change); });
+    const result = serializeStoreCommit(previous, () => {
+      this.assertWritable();
+      return prepareStoreCommit(this.state, change, this.io.checkpoint?.stateBytes ?? 32 * 1024 * 1024);
+    }, prepared => this.io.startCommit(() => this.commitWork(prepared)));
     this.tail = result.catch(() => undefined); return result;
   }
-  private async commitWork(change: (state: WorkflowState) => WorkflowState): Promise<WorkflowState> {
-    this.assertWritable();
-    const next = change(this.snapshot()); assertStoreBounds(next);
-    if (JSON.stringify(next) === JSON.stringify(this.state)) return this.snapshot();
-    next.seq = this.state.seq + 1; stateSchema.parse(next);
-    const body = JSON.stringify(next), size = Buffer.byteLength(body);
-    if (size > (this.io.checkpoint?.stateBytes ?? 32 * 1024 * 1024)) throw new Error('state_too_large');
+  private async commitWork({ next, body, size }: Extract<PreparedStoreCommit, { changed: true }>): Promise<WorkflowState> {
     let stage: CommitStage = 'temporary_open'; let temporary: FileHandle | undefined;
     try {
       this.io.budget?.reserveWrite('state', size);
