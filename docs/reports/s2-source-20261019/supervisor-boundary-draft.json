@@ -9,7 +9,12 @@
     "Poll/TERM/early-wait/KILL/selector/pipe/log-close errors independently and in combination: final actual captured wait is attempted; every resource close is attempted; unknown remains sticky even after a later successful wait.",
     "Captured final wait times out at zero: rootReaped remains false; no target closure acknowledgement claims certainty. Successful actual wait may record reap, but cannot erase prior unknown.",
     "Read failure on one pipe, ordinary EOF on the other, successful close of both: EOF, streamClosed and per-stream errors remain independent and accurately labelled.",
-    "Reaped or mismatched direct handle: no signal or pid adoption; no process group/descendant/global signalling or absence claim."
+    "Reaped or mismatched direct handle: no signal or pid adoption; no process group/descendant/global signalling or absence claim.",
+    "Known samples immediately before, exactly at, and after the original work end: before is eligible, at/after latches work_deadline. Cleanup entry rechecks the original work end even after ordinary EOF/exit.",
+    "Known remaining cleanup time exactly zero or negative: cleanup_deadline is latched independently of ownershipUnknown; actual early and final captured wait(timeout=0) are still invoked and each resource close is attempted.",
+    "Late actual wait(timeout=0) succeeds with exit 0 and both pipes close: rootReaped/stdioClosed may truthfully become true, but bounded acceptance remains false; no expiry latch is cleared.",
+    "Known final sample at/past the original frozen cleanup end or 50-second supervisor envelope: acceptance is false even when every actual reap/EOF/close fact is true. Ends are never refreshed.",
+    "Known exhaustion followed by an earlier recovered clock sample stays failed. A raising/nonfinite clock followed by late exit 0 stays ownershipUnknown and cannot pass; bound failures, errors and actual closure facts remain separate."
   ],
   "futureValidation": "Parent source review first. Any injected harness would need a separate finite exact source-pinned proposal. No execution proposed by this draft."
 }

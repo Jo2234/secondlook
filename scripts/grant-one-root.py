@@ -61,7 +61,7 @@ def run_stage(stage, spec, receipt):
                   directRootPid=None, nativeExitCode=None, rootReaped=False, stdioClosed=False,
                   streamEOF={'stdout': False, 'stderr': False},
                   streamClosed={'stdout': False, 'stderr': False}, streamErrors={'stdout': [], 'stderr': []},
-                  stopCause=None, cleanupErrors=[], ownershipUnknown=False,
+                  stopCause=None, cleanupErrors=[], ownershipUnknown=False, boundFailures=[],
                   signals=[], outputBytes=0, descendantAbsence='NOT_CLAIMED', globalAbsence='NOT_CLAIMED')
     receipt['stages'].append(record)
     child = None
@@ -70,6 +70,13 @@ def run_stage(stage, spec, receipt):
     selector = None
     logs = {}
     started = None
+    work_end = None
+
+    def check_end(now, end, name):
+        # Known exhaustion is sticky and separate from clock/operation uncertainty.
+        if now is not None and end is not None and now >= end:
+            if name not in record['boundFailures']:
+                record['boundFailures'].append(name)
 
     def problem(where, error):
         record['ownershipUnknown'] = True  # Sticky even if a later operation succeeds.
@@ -84,6 +91,8 @@ def run_stage(stage, spec, receipt):
 
     def remaining(end, maximum):
         now = sample('cleanup clock')
+        check_end(now, end, 'cleanup_deadline')
+        check_end(now, SUPERVISOR_END, 'supervisor_envelope')
         return 0 if end is None or now is None else max(0, min(maximum, end - now))
 
     def signal_retained(method, name):
@@ -126,6 +135,7 @@ def run_stage(stage, spec, receipt):
                 record['stopCause'] = 'cooperative_supervisor_TERM'
                 break
             if clock() >= work_end:
+                record['boundFailures'].append('work_deadline')
                 record['stopCause'] = 'work_limit'
                 break
             if not selector.get_map() and child.poll() is not None:
@@ -160,6 +170,8 @@ def run_stage(stage, spec, receipt):
         # If the clock is broken, all waits are still invoked with timeout=0.
         cleanup_start = sample('cleanup start clock')
         cleanup_end = None if cleanup_start is None else min(SUPERVISOR_END, cleanup_start + 4)
+        check_end(cleanup_start, work_end, 'work_deadline')
+        check_end(cleanup_start, SUPERVISOR_END, 'supervisor_envelope')
         record['workSeconds'] = None if started is None or cleanup_start is None else round(cleanup_start - started, 3)
         if child is not None:
             try:
@@ -207,12 +219,16 @@ def run_stage(stage, spec, receipt):
                     problem(label + ' close', error)
         record['stdioClosed'] = all(record['streamClosed'].values())
         finished = sample('work elapsed clock')
+        check_end(finished, cleanup_end, 'cleanup_deadline')
+        check_end(finished, SUPERVISOR_END, 'supervisor_envelope')
         record['stageElapsedSeconds'] = None if started is None or finished is None else round(finished - started, 3)
         if STOP_REQUESTED and not record['stopCause']:
             record['stopCause'] = 'cooperative_supervisor_TERM'
         record['acceptedWithinDirectRootScope'] = (record['nativeExitCode'] == 0 and record['rootReaped']
             and record['stdioClosed'] and all(record['streamEOF'].values()) and not record['stopCause']
-            and not record['ownershipUnknown'] and not record['cleanupErrors'])
+            and not record['ownershipUnknown'] and not record['cleanupErrors']
+            and not record['boundFailures'] and finished is not None and cleanup_end is not None
+            and finished < cleanup_end and finished < SUPERVISOR_END)
         # Evidence failures happen only after every owned resource cleanup attempt.
         save(receipt)
         print(json.dumps({'completed': record}), flush=True)
@@ -317,6 +333,7 @@ def main():
             pid=stage.get('directRootPid'), rootReaped=stage.get('rootReaped', False),
             stdioClosed=stage.get('stdioClosed', False), ownershipUnknown=stage.get('ownershipUnknown', True),
             streamEOF=stage.get('streamEOF'), streamErrors=stage.get('streamErrors'),
+            boundFailures=stage.get('boundFailures'),
             acceptedWithinDirectRootScope=stage.get('acceptedWithinDirectRootScope', False))}), flush=True)
     return 0 if accepted else 1
 

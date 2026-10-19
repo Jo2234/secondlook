@@ -11,7 +11,7 @@ export async function captureGranted({ argv, cwd, env, callerNamespace, candidat
   const streams = Object.fromEntries(['stdout', 'stderr'].map(name => [name, { eof: false, closed: false, errors: [] }]));
   let bytes = 0, exit = null, rootReaped = false, spawned = false, retainedPid = null;
   let stopCause = null, ownershipUnknown = false, targetClosure = null;
-  const errors = [], signals = [], timers = [];
+  const errors = [], signals = [], timers = [], boundFailures = [];
   let wakeStop, wakeExit, wakeClose, wakeDeadline;
   const stopped = new Promise(resolve => { wakeStop = resolve; });
   const exited = new Promise(resolve => { wakeExit = resolve; });
@@ -22,9 +22,17 @@ export async function captureGranted({ argv, cwd, env, callerNamespace, candidat
   for (const name of ['stdout', 'stderr']) streamClosed[name] = new Promise(resolve => { streamResolvers[name] = resolve; });
   const stop = cause => { if (!stopCause) stopCause = cause; wakeStop(); };
   const fail = (where, error) => { ownershipUnknown = true; errors.push({ where, error: error?.name ?? 'unknown' }); stop(where); };
+  const boundFailure = cause => { if (!boundFailures.includes(cause)) boundFailures.push(cause); stop(cause); };
+  const sampleElapsed = where => {
+    try {
+      const elapsed = performance.now() - started;
+      if (!Number.isFinite(elapsed) || elapsed < 0) throw new Error('invalid_clock');
+      return elapsed;
+    } catch (error) { fail(where, error); return null; }
+  };
   // Arm the one outer envelope before spawn, never restart it on an exceptional path.
-  timers.push(setTimeout(() => { ownershipUnknown = true; stop('caller_outer_envelope'); wakeDeadline(); }, 60_000));
-  timers.push(setTimeout(() => stop('caller_work_deadline'), 55_000));
+  timers.push(setTimeout(() => { boundFailure('caller_outer_envelope'); wakeDeadline(); }, 60_000));
+  timers.push(setTimeout(() => boundFailure('caller_work_deadline'), 55_000));
   let child;
   try { child = spawn(argv[0], argv.slice(1), { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] }); }
   catch (error) { for (const timer of timers) clearTimeout(timer); throw error; }
@@ -63,6 +71,9 @@ export async function captureGranted({ argv, cwd, env, callerNamespace, candidat
     await Promise.race([closed, stopped, deadline]);
   } catch (error) { fail('caller_postspawn', error); }
   finally {
+    const workElapsedMs = sampleElapsed('caller_work_clock');
+    if (workElapsedMs !== null && workElapsedMs >= 55_000) boundFailure('caller_work_deadline');
+    if (workElapsedMs !== null && workElapsedMs >= 60_000) { boundFailure('caller_outer_envelope'); wakeDeadline(); }
     // One guarded cleanup path, also entered for pipe/capture/child errors.
     // TERM is cooperative: Python cleans its retained Node root. This caller never signals Node.
     if (!rootReaped) {
@@ -82,11 +93,6 @@ export async function captureGranted({ argv, cwd, env, callerNamespace, candidat
     }
     for (const timer of timers) { try { clearTimeout(timer); } catch (error) { fail('caller_clear_timer', error); } }
   }
-  let elapsedMs = null;
-  try {
-    elapsedMs = performance.now() - started;
-    if (!Number.isFinite(elapsedMs) || elapsedMs < 0) throw new Error('invalid_clock');
-  } catch (error) { elapsedMs = null; fail('caller_clock', error); }
   // Require an explicit source-bound target closure record, never infer it from Python's exit.
   try {
     const lines = Buffer.concat(buffers.stdout).toString('utf8').trimEnd().split('\n');
@@ -96,9 +102,13 @@ export async function captureGranted({ argv, cwd, env, callerNamespace, candidat
     targetClosure = proof;
   } catch (error) { fail('retained_target_closure', error); }
   const stdioClosed = streams.stdout.closed && streams.stderr.closed;
+  // Measure after acknowledgement parsing. A delayed timer is never the acceptance clock.
+  const elapsedMs = sampleElapsed('caller_clock');
+  if (elapsedMs !== null && elapsedMs > 60_000) boundFailure('caller_outer_envelope');
   const receipt = { pid: retainedPid, spawned, exit, rootReaped, stdioClosed, streams, stopCause, ownershipUnknown, errors,
-    targetClosure, outputBytes: bytes, elapsedMs, signals,
-    acceptedWithinDirectRootScope: exit?.code === 0 && !stopCause && !ownershipUnknown && targetClosure?.acceptedWithinDirectRootScope === true,
+    targetClosure, outputBytes: bytes, elapsedMs, signals, boundFailures,
+    acceptedWithinDirectRootScope: exit?.code === 0 && !stopCause && !ownershipUnknown && boundFailures.length === 0
+      && elapsedMs !== null && elapsedMs <= 60_000 && targetClosure?.acceptedWithinDirectRootScope === true,
     qualification: 'retained caller and explicitly reported target roots only; no descendant/global absence or OS resource sandbox proof' };
   if (!rootReaped || !stdioClosed || !streams.stdout.eof || !streams.stderr.eof || ownershipUnknown) {
     const error = new Error('caller output retained in memory only: closure not proven');

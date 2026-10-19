@@ -9,7 +9,12 @@
     "Exit or PID mismatch before signal: no adopted, replaced or already reaped handle is signalled; false/throwing kill remains sticky unknown.",
     "Normal supervisor close but missing/mismatched/unknown target acknowledgement: no inferred target closure and no caller namespace creation.",
     "55-second work cutoff, 60-second original total envelope; cleanup never refreshes the original deadline and uses no interval. Expired envelope still attempts every final wait and retains unknown.",
-    "Clock error after actual closure: receipt elapsed is unknown, failure remains sticky; cleanup waits were already attempted and no disk writes follow."
+    "Clock error after actual closure: receipt elapsed is unknown, failure remains sticky; cleanup waits were already attempted and no disk writes follow.",
+    "Closure resumes before/at/after original 55,000-ms work end without a serviced timer: cleanup-entry sample latches work failure at/after cutoff; independent retained-root/stream waits remain attempted.",
+    "Final sample immediately before, exactly at, and after original 60,000-ms end after acknowledgement parsing: final eligibility requires known elapsed <=60,000, no prior bound failure, no unknown and all existing guards. Exactly at cannot erase a prior exhausted-work/envelope latch.",
+    "Actual exit 0 plus all EOF/close callbacks arrive after 60,000 ms before deadline callback runs: final measured guard latches caller_outer_envelope and acceptance is false. Actual closure facts remain true; receipt is cleanup evidence only.",
+    "An exhausted work/envelope latch followed by a smaller finite final elapsed reading never passes; a clock exception followed by a recovered reading/late exit 0 remains independently sticky unknown.",
+    "Known exhausted envelope still attempts exit, ChildProcess close, stdout close and stderr close separately; no renewed deadline, extra observer, unknown signal or synthetic EOF. Closure proof and bounded acceptance stay separate."
   ],
   "futureValidation": "Parent source review first. Any injected harness would need a separate finite exact source-pinned proposal. No execution proposed by this draft."
 }

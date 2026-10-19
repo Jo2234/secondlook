@@ -213,12 +213,12 @@
       "bytes": 123
     },
     "scripts/grant-caller.mjs": {
-      "sha256": "779c3214b1ee7777727a1f2a1a62fc5c9645b3f69a9cc45184861f178cec9852",
-      "bytes": 7943
+      "sha256": "b99c7acfc685bcabddd8b2c9f41fa05226256dfa53ce7c8f9d45c6fec4c2c243",
+      "bytes": 8701
     },
     "scripts/grant-one-root.py": {
-      "sha256": "87f9a96136375f50b0cc7eea4b0123cfcbb2d2aece4363093130bc260559345f",
-      "bytes": 16510
+      "sha256": "c45c005088a656ac128a500a8d63fcdc0fb0759d0d958c390f37f00c69bae4c2",
+      "bytes": 17490
     },
     "scripts/licenses.mjs": {
       "sha256": "066b5257944e7376abe8d924241966178726645160fbcd37542bd9ad9e3c590b",
