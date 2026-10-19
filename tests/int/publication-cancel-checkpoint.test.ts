@@ -266,7 +266,7 @@ test('DRAFT publication cleanup fault: cancelled owned media rejection fences af
     expect((executionFailure!.error as AggregateError).errors[1]).toBe(cleanupError);
     expect(() => runner.assertAdmissionOpen()).toThrow('runner_fenced');
     let admissionCalled = false;
-    await expect(runner.admit(async () => { admissionCalled = true; return { value: undefined, jobIds: [], replay: false }; }, () => false)).rejects.toMatchObject({ code: 'runner_fenced' });
+    await expect(Promise.resolve().then(() => runner.admit(async () => { admissionCalled = true; return { value: undefined, jobIds: [], replay: false }; }, () => false))).rejects.toMatchObject({ code: 'runner_fenced' });
     expect(admissionCalled).toBe(false); await expect(runner.drain()).rejects.toMatchObject({ code: 'runner_fenced' });
     const state = store.snapshot(), job = state.jobs.find(item => item.id === jobId)!;
     expect(state).toEqual(before); expect(job).toEqual(response); expect(job.attempts).toHaveLength(1);
