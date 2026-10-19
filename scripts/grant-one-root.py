@@ -194,6 +194,9 @@ def main():
     binding = retained['runtimeBinding']
     if sys.executable != binding['expectedSysExecutable'] or not sys.dont_write_bytecode or any(getattr(sys.flags,k,None) != v for k,v in binding['expectedFlags'].items()):
         raise RuntimeError('runtime entry binding mismatch')
+    for alias, expected in retained['installedAliasTargets'].items():
+        if str(Path(alias).resolve(strict=True)) != expected:
+            raise RuntimeError('historical installed alias target mismatch')
     budget = 268435456
     named = [(p['path'],p['sha256']) for p in binding['filePins']]
     named += [(retained['runtimeFilePins']['node']['path'],retained['runtimeFilePins']['node']['sha256'])]
