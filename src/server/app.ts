@@ -11,7 +11,24 @@ import { fixtureRoutes, RouteError } from './routes/fixture.js';
 import type { Services } from './routes/fixture.js';
 import { RuntimeRefused } from './owned-runtime.js';
 import { StoreCommitError } from './store.js';
-export function createApp(env: AppEnv, services?: Services) {
+import { createHash } from 'node:crypto';
+/** Domain-specific R36 bundle input. No directory, URL resolver or raw app override. */
+export interface FixtureUiAssets { readonly index: Uint8Array; readonly css: Uint8Array; readonly script: Uint8Array }
+export function createApp(env: AppEnv, services?: Services, fixtureUi?: FixtureUiAssets) {
+  const staticMap = new Map<string, { bytes: Uint8Array; mime: string }>();
+  if (fixtureUi) {
+    if (env.mode !== 'fixture') throw new Error('fixture_ui_requires_fixture');
+    for (const [input, paths, size, sha, mime] of [
+      [fixtureUi.index, ['/', '/index.html'], 635, '6fbc194cef050a8a71f0d959e5784378f6c2663e00f37670e6680d93d2f13ef8', 'text/html; charset=utf-8'],
+      [fixtureUi.css, ['/assets/index-Bj877RsC.css'], 9599, 'b936199abbbe9cfeac17ab8a6192b606edaed3f7fe23f001e46ce493fdb1909d', 'text/css; charset=utf-8'],
+      [fixtureUi.script, ['/assets/index-Cs7ljINS.js'], 627467, '0c52aa1b43ce2c636c260edba74a2ed400f02f1b0e3d0333fa4f63146ca2a7dd', 'text/javascript; charset=utf-8'],
+    ] as const) {
+      if (input.byteLength !== size) throw new Error('fixture_ui_pin_mismatch');
+      const bytes = new Uint8Array(input); // Own a bounded copy; later caller mutation cannot change it.
+      if (createHash('sha256').update(bytes).digest('hex') !== sha) throw new Error('fixture_ui_pin_mismatch');
+      for (const path of paths) staticMap.set(path, { bytes, mime });
+    }
+  }
   const app = new Hono();
   app.use('*', async (c, next) => {
     c.header('X-Content-Type-Options', 'nosniff');
@@ -28,6 +45,18 @@ export function createApp(env: AppEnv, services?: Services) {
     await next();
   });
   app.use('*', bodyLimit({ maxSize: INBOUND_MAX_BYTES, onError: c => c.json({ mode: env.mode, error: 'body_too_large' }, 413) }));
+  // Same guards and listener as the real API. Exact raw URL suffix excludes query/encoding aliases.
+  app.use('*', async (c, next) => {
+    if (c.req.method === 'GET' || c.req.method === 'HEAD') {
+      const path = c.req.url.slice(c.req.url.indexOf('/', c.req.url.indexOf('://') + 3));
+      const asset = staticMap.get(path);
+      if (asset) {
+        c.header('Content-Type', asset.mime); c.header('Content-Length', String(asset.bytes.byteLength));
+        return c.body(c.req.method === 'HEAD' ? null : new Uint8Array(asset.bytes));
+      }
+    }
+    await next();
+  });
   app.get('/api/health', c => c.json({ mode: env.mode, version: '0.0.0', thresholdsVersion: THRESHOLDS_VERSION, buyerUpload: 'disabled', preflight: services?.store.snapshot().preflight ?? null, capabilities: [...BASE_CAPABILITIES] } satisfies HealthResponse));
   app.get('/', c => c.html(`<!doctype html><html lang="en"><meta charset="utf-8"><title>SecondLook</title><body><p role="status">${env.mode === 'fixture' ? COPY.mode.fixture : COPY.mode.live}</p><p>Fixture API source checkpoint. Seller UI is pending.</p></body></html>`));
   if (services) fixtureRoutes(app, env, services);

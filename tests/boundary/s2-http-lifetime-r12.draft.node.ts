@@ -188,3 +188,40 @@ test('24 disposal failure stays failed and never calls store close', async () =>
   const root = assert.rejects(h.owner.wait(), error => error === failure); h.owner.stop(); await root;
   assert.equal(h.locked, true); assert.equal(h.calls.includes('closeStore'), false); assert.equal(h.listeners, 0); assert.equal(h.deadline, false);
 });
+
+// R38 DRAFT_UNRUN additions. Pure injected listener-contract cases, NOT native-body tests.
+// The original 24 registrations and their assertions above remain byte-for-byte intact.
+test('25 R38 resolved application response does not release a pending native bridge', async () => {
+  const native = deferred<void>(); const h = boundary({ close: () => native.promise }); h.events.ready();
+  assert.equal(await h.owner.handle(() => 'actual response returned', refuse), 'actual response returned');
+  const stop = h.owner.stop(); await h.closeStarted.promise;
+  assert.equal(h.owner.status().requests, 0); assert.equal(h.locked, true);
+  assert.equal(h.calls.includes('closeStore'), false); native.resolve(); await stop;
+  assert.equal(h.locked, false);
+});
+test('26 R38 a later native cancellation rejection stays failed after application fulfillment', async () => {
+  const native = deferred<void>(), failure = new Error('original_reader_cancel_failed');
+  const h = boundary({ close: () => native.promise }); h.events.ready();
+  await h.owner.handle(() => 'response', refuse);
+  const root = assert.rejects(h.owner.wait(), error => error === failure);
+  h.owner.stop(); await h.closeStarted.promise; native.reject(failure); await root;
+  assert.equal(h.locked, true); assert.equal(h.calls.includes('closeStore'), false); assert.equal(h.listeners, 3);
+});
+test('27 R38 native close failure does not discard an independent body join', async () => {
+  const body = deferred<void>(), bodyStarted = deferred<void>(), failure = new Error('native_close_failed');
+  const h = boundary({ close: async () => {
+    const joins = await Promise.allSettled([Promise.reject(failure), (async () => { bodyStarted.resolve(); await body.promise; })()]);
+    for (const result of joins) if (result.status === 'rejected') throw result.reason;
+  } }); h.events.ready();
+  let ended = false; const root = assert.rejects(h.owner.wait(), error => error === failure).then(() => { ended = true; });
+  h.owner.stop(); await bodyStarted.promise;
+  assert.equal(ended, false); assert.equal(h.locked, true); assert.equal(h.calls.includes('closeStore'), false);
+  body.resolve(); await root; assert.equal(h.locked, true);
+});
+test('28 R38 pending native release retains the same stop task and original deadline', async () => {
+  const native = deferred<void>(); const h = boundary({ close: () => native.promise }); h.events.ready();
+  const first = h.owner.stop(); await h.closeStarted.promise;
+  assert.equal(h.owner.stop(), first); assert.equal(h.calls.filter(call => call === 'armDeadline').length, 1);
+  assert.equal(h.deadline, true); assert.equal(h.locked, true); assert.equal(h.listeners, 3);
+  native.resolve(); await first; assert.equal(h.deadline, false);
+});
