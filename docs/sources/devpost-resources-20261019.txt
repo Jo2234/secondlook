@@ -1,0 +1,188 @@
+
+ Devpost
+ [https://devpost.com] 
+ [https://secure.devpost.com/users/login?ref=top-nav-login] 
+ Log in
+ [https://secure.devpost.com/users/register?ref_content=signup_global_nav&ref_feature=signup&ref_medium=button] 
+ Sign up
+ Join a hackathon
+ [https://devpost.com/hackathons] 
+Devpost
+Participate in our public hackathons
+ [https://devpost.com/hackathons] 
+ Hackathons 
+ [https://devpost.com/software] 
+ Projects 
+ [https://devpost.team] 
+Devpost for Teams
+Access your company's private hackathons
+ [https://devpost.team] 
+ Login 
+ Host a hackathon
+ [https://info.devpost.com/product/public-hackathons] 
+Devpost
+Grow your developer ecosystem and promote your platform
+ [https://info.devpost.com/product/public-hackathons] 
+ Host a public hackathon 
+ [https://info.devpost.com/product/devpost-for-teams] 
+Devpost for Teams
+Drive innovation, collaboration, and retention within your organization
+ [https://info.devpost.com/product/devpost-for-teams] 
+ Host an internal hackathon 
+By use case
+ [https://info.devpost.com/product/ai-hackathons] 
+ AI hackathons 
+ [https://info.devpost.com/product/customer-hackathons] 
+ Customer hackathons 
+ [https://info.devpost.com/product/devpost-for-teams] 
+ Employee hackathons 
+ [https://info.devpost.com/product/public-hackathons] 
+ Public hackathons 
+ Resources
+ [https://info.devpost.com/blog] 
+ Blog
+ Insights into hackathon planning and participation
+ [https://info.devpost.com/customer-stories] 
+ Customer stories
+ Inspiration from peers and other industry leaders
+ [https://info.devpost.com/guides] 
+ Planning guides
+ Best practices for planning online and in-person hackathons
+ [https://info.devpost.com/webinar-events] 
+ Webinars & events
+ Upcoming events and on-demand recordings
+ [https://help.devpost.com/] 
+ Help desk
+ Common questions and support documentation
+ [https://devpost.com] 
+ Join a hackathon
+ [https://devpost.com/hackathons] 
+Devpost
+Participate in our public hackathons
+ [https://devpost.com/hackathons] 
+ Hackathons 
+ [https://devpost.com/software] 
+ Projects 
+ [https://devpost.team] 
+Devpost for Teams
+Access your company's private hackathons
+ [https://devpost.team] 
+ Login 
+ Host a hackathon
+ [https://info.devpost.com/product/public-hackathons] 
+Devpost
+Grow your developer ecosystem and promote your platform
+ [https://info.devpost.com/product/public-hackathons] 
+ Host a public hackathon 
+ [https://info.devpost.com/product/devpost-for-teams] 
+Devpost for Teams
+Drive innovation, collaboration, and retention within your organization
+ [https://info.devpost.com/product/devpost-for-teams] 
+ Host an internal hackathon 
+By use case
+ [https://info.devpost.com/product/ai-hackathons] 
+ AI hackathons 
+ [https://info.devpost.com/product/customer-hackathons] 
+ Customer hackathons 
+ [https://info.devpost.com/product/devpost-for-teams] 
+ Employee hackathons 
+ [https://info.devpost.com/product/public-hackathons] 
+ Public hackathons 
+ Resources
+ [https://info.devpost.com/blog] 
+ Blog
+ Insights into hackathon planning and participation
+ [https://info.devpost.com/customer-stories] 
+ Customer stories
+ Inspiration from peers and other industry leaders
+ [https://info.devpost.com/guides] 
+ Planning guides
+ Best practices for planning online and in-person hackathons
+ [https://info.devpost.com/webinar-events] 
+ Webinars & events
+ Upcoming events and on-demand recordings
+ [https://help.devpost.com/] 
+ Help desk
+ Common questions and support documentation
+ [https://secure.devpost.com/users/login?ref=top-nav-login] 
+ Log in
+ [https://secure.devpost.com/users/register?ref_content=signup_global_nav&ref_feature=signup&ref_medium=button] 
+ Sign up
+ [https://youcam-api-skin-ai-ecommerce.devpost.com/] YouCam API Skin AI & eCommerce VTO Hackathon
+ Deadline: Nov 2, 2026 @ 11:45am EST
+ [https://youcam-api-skin-ai-ecommerce.devpost.com/register?flow%5Bdata%5D%5Bchallenge_id%5D=31400&flow%5Bname%5D=register_for_challenge] Join hackathon
+ [https://youcam-api-skin-ai-ecommerce.devpost.com/] 
+ Descend
+ [https://youcam-api-skin-ai-ecommerce.devpost.com/] Overview
+ [https://devpost.com/submit-to/31400-youcam-api-skin-ai-ecommerce-vto-hackathon/manage/submissions] My projects
+ [https://youcam-api-skin-ai-ecommerce.devpost.com/participants] Participants (1021)
+ [https://youcam-api-skin-ai-ecommerce.devpost.com/resources] Resources
+ [https://youcam-api-skin-ai-ecommerce.devpost.com/rules] Rules
+ [https://youcam-api-skin-ai-ecommerce.devpost.com/project-gallery] Project gallery
+ [https://youcam-api-skin-ai-ecommerce.devpost.com/updates] Updates
+ [https://youcam-api-skin-ai-ecommerce.devpost.com/forum_topics] Discussions
+New to YouCam API? Get up and running in under 30 minutes with these resources. Whether you're making your first API call or picking the right endpoint for your project, these guides will fast-track your understanding of the platform.
+Quick Start in 3 Steps:
+Register on Devpost. Get your exclusive redeem code by email (2 minutes)
+Sign up for YouCam API. [https://yce.perfectcorp.com/ai-api?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] Click here to sign up and verify your email. (2 minutes)
+Claim Your Free 1,000 YouCam API Units. [https://yce.perfectcorp.com/ai-api?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] Click here and go to Account > Redeem Code > Enter the redeem code (3 minutes)
+For India region, please click [https://www.makeupar.com/perfectbeauty/youcam/terms-of-service-api?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] HERE
+1,000 API Units will be added to your account immediately.
+Pick an API, review the project ideas below, and start building. You can have your first request running in about 30 minutes.
+API Type: Standard RESTful API
+Works with websites, e-commerce platforms, iOS/Android apps, and mini-programs. No special SDK required.
+Essential Documentation:
+Resource
+Description
+ [https://yce.perfectcorp.com/ai-api?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] YouCam API Overview
+Platform overview, full API suite, and what you can build.
+ [https://yce.perfectcorp.com/api-console/en/account-settings/?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] API Console & Sign-up
+Create your account, manage your key, and check your unit balance.
+ [https://yce.perfectcorp.com/api-console/en/api-keys/?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] First API Call
+Log in and set up your API key and make your first request.
+ [https://yce.perfectcorp.com/api-console/en/api-playground/?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] API Playground
+Test endpoints and preview results before you write a single line of code.
+ [https://docs.perfectcorp.com/develop/introduction] API Documentation
+Browse endpoint references, parameters, and code samples for every API in the suite.
+Essential Documentation (For India Region)
+Resource
+Description
+ [https://yce.makeupar.com/ai-api?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] YouCam API Overview
+Platform overview, full API suite, and what you can build.
+ [https://yce.makeupar.com/api-console/en/account-settings/?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] API Console & Sign-up
+Create your account, manage your key, and check your unit balance.
+ [https://yce.makeupar.com/api-console/en/api-keys/?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] First API Call
+Log in and set up your API key and make your first request.
+ [https://yce.makeupar.com/api-console/en/api-playground/?utm_source=event&utm_medium=YouCamAPIHackathon&utm_campaign=devpost&utm_content=skin_ecommerce] API Playground
+Test endpoints and preview results before you write a single line of code.
+ [https://docs.makeupar.com/develop/introduction] API Documentation
+Browse endpoint references, parameters, and code samples for every API in the suite.
+Devpost
+ [https://info.devpost.com/about] About
+ [https://info.devpost.com/careers] Careers
+ [https://info.devpost.com/contact] Contact
+ [https://help.devpost.com/] Help
+Hackathons
+ [https://devpost.com/hackathons] Browse hackathons
+ [https://devpost.com/software] Explore projects
+ [https://info.devpost.com] Host a hackathon
+ [https://info.devpost.com/guides] Hackathon guides
+Portfolio
+ [https://devpost.com/portfolio/redirect?page=projects] Your projects
+ [https://devpost.com/portfolio/redirect?page=hackathons] Your hackathons
+ [https://devpost.com/settings] Settings
+Connect
+ [https://twitter.com/devpost] 
+ Twitter
+ [https://discord.com/invite/HP4BhW3hnp] 
+ Discord
+ [https://www.facebook.com/devposthacks] 
+ Facebook
+ [https://www.linkedin.com/company/devpost/] 
+ LinkedIn
+© 2026 Devpost, Inc. All rights reserved.
+ [https://info.devpost.com/legal/community-guidelines] Community guidelines
+ [https://info.devpost.com/legal/security] Security
+ [https://info.devpost.com/legal/california-consumer-privacy-act] CA notice
+ [https://info.devpost.com/legal/privacy-policy] Privacy policy
+ [https://info.devpost.com/legal/terms-of-service] Terms of service
