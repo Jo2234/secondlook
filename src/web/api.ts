@@ -51,6 +51,9 @@ export class SellerApi {
   async call<T>(path: string, method = 'GET', body?: unknown, valid: (value: R) => boolean = () => false): Promise<T> {
     if (!/^\/api\/[a-z0-9/_-]+$/.test(path) || !['127.0.0.1', 'localhost'].includes(location.hostname) || location.protocol !== 'http:') throw new ApiError('origin_refused');
     const mutation = method !== 'GET';
+    // The frozen route replies after completion, without prompt admission IDs or
+    // an owned-runner admission contract. No browser admission transport is allowed.
+    if (mutation && /\/(?:tryon|retry)(?:\/|$)/.test(path)) throw new ApiError('admission_contract_unavailable');
     if (mutation && !this.verifiedFixture) throw new ApiError('fixture_required');
     const controller = new AbortController(); this.active.add(controller);
     const timer = setTimeout(() => controller.abort(), 15000);
@@ -78,7 +81,8 @@ export class SellerApi {
       if (value.mode !== 'fixture') throw new ApiError('fixture_required');
       if (!response.ok) {
         const code = typeof value.error === 'string' && /^[a-z0-9_]{1,80}$/.test(value.error) ? value.error : 'request_refused';
-        throw new ApiError(code, mutation && !(response.status < 500 && DEFINITIVE.has(code)), response.status);
+        const invalidPhoto = path === '/api/photos' && method === 'POST' && response.status === 422 && code === 'image_invalid';
+        throw new ApiError(code, mutation && !(invalidPhoto || response.status < 500 && DEFINITIVE.has(code)), response.status);
       }
       // Invalid success envelopes after a write are uncertain, just like malformed JSON.
       if (!valid(value)) throw new ApiError('response_invalid');
@@ -106,7 +110,7 @@ export class SellerApi {
   }
   evaluate = (value: string, declaration: GarmentDeclaration) => this.call<QualityReport>(`/api/photos/${id(value)}/evaluate`, 'POST', { declaration }, v => quality(v) && v.photoId === value);
   save = (value: string | null, body: ListingWriteRequest) => this.call<ListingResponse>(value ? `/api/listings/${id(value)}` : '/api/listings', value ? 'PATCH' : 'POST', body, v => listing(v) && (value === null || v.id === value));
-  generate = (value: string, body: TryOnRequest) => this.call<JobsResponse>(`/api/listings/${id(value)}/tryon`, 'POST', body, v => Array.isArray(v.jobs) && v.jobs.length === body.modelPhotoIds.length && list(v.jobs, 2, j => job(j) && object(j) && j.listingId === value && j.requestId === body.requestId && j.garmentPhotoId === body.garmentPhotoId && body.modelPhotoIds.includes(j.modelPhotoId as string)) && new Set((v.jobs as R[]).map(j => j.modelPhotoId)).size === body.modelPhotoIds.length);
+  async generate(_value: string, _body: TryOnRequest): Promise<JobsResponse> { throw new ApiError('admission_contract_unavailable'); }
   job = (value: string) => this.call<TryOnJob>(`/api/jobs/${id(value)}`, 'GET', undefined, v => job(v) && v.id === value);
   cancel = (value: string) => this.call<TryOnJob>(`/api/jobs/${id(value)}/cancel`, 'POST', {}, v => job(v) && v.id === value);
   dispose(): void { for (const controller of this.active) controller.abort(); this.active.clear(); }
