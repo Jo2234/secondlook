@@ -1,0 +1,7 @@
+# S1 synthetic DEMO plate oracle correction — 19 October 2026
+
+Master source review identified the same Sharp statistics issue previously corrected in the normalization test: `stats()` measures its input image, so placing `extract()` before `stats()` did not establish contrast in the DEMO plate. The official API reference supplied by the master is https://sharp.pixelplumbing.com/api-input/#stats. This task did not fetch it or run Sharp.
+
+On a new branch from b9cc972fbf84dd98f5add903bd8c05d05b6fe3f0, the synth test now materializes the exact existing crop as a lossless PNG buffer and measures that buffer. The crop remains left 18, top 966, width 250, height 44. The channel-0 standard-deviation assertion remains strictly greater than 10. The DEMO string, fixture geometry, generator, SYNTH_VERSION, output encoding, dependency pins and production sources are unchanged. No normalization/calibration test or threshold changed. The old crop-oracle branch remains preserved at b9cc972.
+
+Status: source correction only, UNRUN. No typecheck, Vitest, generator, Sharp import or application runtime was invoked for this correction. Fixture reproducibility and this corrected plate assertion require a separately source-reviewed exact fresh master grant. Prior raw failed/UNVERIFIED evidence and the master's qualified r3 normalization/calibration closure are preserved; they do not establish this changed synth test's result. F33's measured native RSS acceptance is still pending, and S1, S2 and S3 are not accepted complete by this note.

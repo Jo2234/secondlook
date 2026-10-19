@@ -15,7 +15,8 @@ test('synthetic fixtures are byte-stable across two generations with visible DEM
       const bytes = await readFile(join(a, `${kind}.png`));
       expect(bytes.equals(await readFile(join(b, `${kind}.png`)))).toBe(true);
       expect(await sharp(bytes).metadata()).toMatchObject({ format: 'png', width: 768, height: 1024 });
-      const plate = await sharp(bytes).extract({ left: 18, top: 966, width: 250, height: 44 }).stats();
+      const platePixels = await sharp(bytes).extract({ left: 18, top: 966, width: 250, height: 44 }).png().toBuffer();
+      const plate = await sharp(platePixels).stats();
       expect(plate.channels[0]!.stdev).toBeGreaterThan(10);
     }
   } finally { await rm(dir, { recursive: true, force: true }); }
