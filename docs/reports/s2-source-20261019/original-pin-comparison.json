@@ -1,0 +1,10 @@
+{
+  "base": "936770da4d4c155418b327d3829e901b9638d880",
+  "originalCount": 103,
+  "matched": 101,
+  "changed": [
+    "src/server/app.ts",
+    "src/server/main.ts"
+  ],
+  "qualification": "Only S0 app/main are revised. All original frozen domain/shared/image/limits/policy/rate-limiter/preflight source remains byte-identical."
+}

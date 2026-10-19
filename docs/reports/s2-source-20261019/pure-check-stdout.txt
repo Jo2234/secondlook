@@ -1,0 +1,17 @@
+✔ S2 fixture has three running polls then success and never invents a price (3.355684ms)
+✔ S2 fixture distinguishes ambiguous transport from received status and no-units (1.230292ms)
+✔ S2 fixture one-expiry refresh and abort are deterministic without a network (0.540283ms)
+✔ S2 fixture scenario selection uses longest hexadecimal prefix and safe default (0.485573ms)
+✔ S2 redaction reconstructs errors and strips bearer and presigned query secrets (2.259286ms)
+✔ S2 write-ahead commitment precedes permission to POST (0.776961ms)
+✔ S2 recovery releases provably unsent work and preserves ambiguous commitments idempotently (1.855188ms)
+✔ S2 recovery is GET-only inside both original deadlines and requests nothing after either (0.942441ms)
+✔ S2 succeeded stays absorbing; fixture preflight explicitly costs zero without vendor calls (9.468054ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 190.79434

@@ -1,0 +1,27 @@
+{
+  "status": "PROPOSED_EXACT_INPUT_NOT_AUTHORITY",
+  "argv": [
+    "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+    "-I",
+    "-B",
+    "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/projects/youcam-wt/slot1/scripts/grant-one-root.py",
+    "--proposal",
+    "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/projects/youcam-wt/slot1/docs/reports/s2-source-20261019/f33-grant-proposal.json",
+    "--proposal-sha256",
+    "fd9d97382cc799b38546f9234a6c693db91cd6a5e01b0711ade249c7365791f9",
+    "--runner-sha256",
+    "88858964c84e50441aec6b22194ce18e82569f2d50e7436c0d9a7af161d08f32",
+    "--grant-file",
+    "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/control/resume-remaining-20261019/youcam-f33-onefile-source-r1-grant.json"
+  ],
+  "cwd": "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/projects/youcam-wt/slot1",
+  "env": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "TZ": "UTC",
+    "PYTHONCOERCECLOCALE": "0",
+    "PYTHONUTF8": "1"
+  },
+  "callerNamespace": "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/projects/youcam-wt/slot1/test-results/youcam-f33-caller-20261019-r1"
+}

@@ -1,0 +1,532 @@
+{
+  "schema": "youcam-s2-source-pins/1",
+  "candidate": "8c6b909ed09c70c0e5cf0fa2bfb3a53030c1d8e6",
+  "testedPureCandidate": "7da22615967ecab6216284d0b4574dc5cd3744d7",
+  "base": "936770da4d4c155418b327d3829e901b9638d880",
+  "files": {
+    ".env.example": {
+      "sha256": "80ef9c9fcf2b5736dcd828f147563ab0851d213264249d78d73304c675ab0be2",
+      "bytes": 132
+    },
+    ".gitignore": {
+      "sha256": "820bde251b677c80bd35aff3b74868d165b6fe29a33a169663dc13dae9632d46",
+      "bytes": 130
+    },
+    ".npmrc": {
+      "sha256": "c0d1ee55403ad82573749c13f95f2498f3fd547b6709fa54606a13f7de3416dc",
+      "bytes": 50
+    },
+    "LICENSE": {
+      "sha256": "3283b2426d3d8282bd1df9ce1a28c91bd2ea770bb1f91a7effc142ede5e25d30",
+      "bytes": 1071
+    },
+    "README.md": {
+      "sha256": "9b70386b9970541bfeda89b15a871a6049e20268483cbf116db838d2cef9c674",
+      "bytes": 3637
+    },
+    "assets/demo/SHA256SUMS": {
+      "sha256": "448bdc5f43f931ca0f27baa4d103ed560f4e6a9730192200603ef3c2692d5a5d",
+      "bytes": 388
+    },
+    "assets/demo/dress.png": {
+      "sha256": "59146fa6ad8312b950eedfc2f0fa65108d5c278999a27f0f3ea256867288692a",
+      "bytes": 27283
+    },
+    "assets/demo/jacket.png": {
+      "sha256": "b121d0f043842f40ce7a39e270df837eef3503550a6bc873a8f15d52ed16b370",
+      "bytes": 35185
+    },
+    "assets/demo/model-front.png": {
+      "sha256": "4c51ae712222089addaf433c18cb41511cd5ebdb5c63cfc9f3b756eaae3f9b7d",
+      "bytes": 40260
+    },
+    "assets/demo/tee.png": {
+      "sha256": "bde7d2198be0f460051e5250e22f31c1c38cac8b6ec1d6ad26b8a5a9e9ba3f1e",
+      "bytes": 20060
+    },
+    "assets/demo/trousers.png": {
+      "sha256": "484c83c97577aeff48d4109c3c3451385ed541a2d1adac9c96e81ef370f39a5f",
+      "bytes": 31122
+    },
+    "docs/calibration.md": {
+      "sha256": "84587edf58dce1be3b1b3d62955ddcd3b19c54eceb905534de5facc599d31a1b",
+      "bytes": 3305
+    },
+    "docs/decisions/PC-1-buyer-photo-retention.md": {
+      "sha256": "1b018b914a1485b45bd05c5da8eb758b04b727341871234276577153ad9ac044",
+      "bytes": 7369
+    },
+    "docs/decisions/f33-test-source-20261019.md": {
+      "sha256": "4238becaac05d3bae80c6f5f54c224d17abebadc84d9503e754315a053211522",
+      "bytes": 1327
+    },
+    "docs/decisions/joint-decisions-accepted.md": {
+      "sha256": "0ba6681194730ae6ef70d1a81dee39b080b324ac5642125771d625ad0a966b32",
+      "bytes": 962
+    },
+    "docs/decisions/lead-decision-log.md": {
+      "sha256": "3eab952ee10ee4d9d80c9c1982cdae3a00a45248de079662567e2fee460a1131",
+      "bytes": 3229
+    },
+    "docs/decisions/review-r2-clarifications.md": {
+      "sha256": "31f0fb8bedd525e4e9f78eff8295498bee55c4594be70511a5a0a66d7c67c891",
+      "bytes": 5808
+    },
+    "docs/decisions/s1-crop-oracle-correction-20261019.md": {
+      "sha256": "1156681819c8ef50c07f9c8505b7fdf29fe60362c7208a0882fc154b2d36e3e2",
+      "bytes": 3434
+    },
+    "docs/decisions/s1-r6-assets-checkpoint-20261019.md": {
+      "sha256": "00c137878dd483025dfc3d9c2693702874a624bb37c2e0396ca0420a74814385",
+      "bytes": 1232
+    },
+    "docs/decisions/s1-source-review-r1.md": {
+      "sha256": "aa0ad94c4e107fc20fa30a14e397b818d30976eedeb7ea11314ec47df6c0ff53",
+      "bytes": 2485
+    },
+    "docs/decisions/s1-synth-oracle-correction-20261019.md": {
+      "sha256": "906792ad10c983e1f34fa0cee51fc1f31979c7b94a0b0524bb395a984a888767",
+      "bytes": 1542
+    },
+    "docs/decisions/spec-r1-changes.md": {
+      "sha256": "7febbf76828a2a7cf81ad17f34fa42fe0cc2ffa352d84a57bbdc5f58e1e0da1a",
+      "bytes": 4470
+    },
+    "docs/implementation-plan.md": {
+      "sha256": "77a93af45630d147fc91d9edbc9a43f807c76b681382f0fd995de5330fb0918e",
+      "bytes": 104806
+    },
+    "docs/lead-status.md": {
+      "sha256": "87b14014a09f9f7aa5b0857c1a59bbc5f5b82e56ca40b051bdbe4964bdd749d1",
+      "bytes": 989
+    },
+    "docs/licenses.json": {
+      "sha256": "903f7a75771c6324e1b9ae612476761972d4dbfb5a033708e57409339cff4492",
+      "bytes": 90903
+    },
+    "docs/licenses.md": {
+      "sha256": "4ec6b19adfb18c316fe8befe9ca63b64425699635c43bf990325d3de6095b804",
+      "bytes": 17761
+    },
+    "docs/sources/SHA256SUMS": {
+      "sha256": "e60de21c14d2bf7604e8b3d0bff12637b2505ed4658a15cf94816a1eaf9d0b8a",
+      "bytes": 1776
+    },
+    "docs/sources/devpost-overview-20261019.txt": {
+      "sha256": "18fef5066a3e90ac9b0e598f9e8d15ecd46b7cbbdcef6b66cece3d02376b361a",
+      "bytes": 14353
+    },
+    "docs/sources/devpost-resources-20261019.txt": {
+      "sha256": "e3f7f81c3d2e7c6fb4ec2df715520ca6dc526b51dbc68a60ba5cd8ad02ae2257",
+      "bytes": 9339
+    },
+    "docs/sources/devpost-rules-20261019.txt": {
+      "sha256": "a68c323f1d5812d768e61dddd412bf3727d091e7b8f9c742927b23cab31b52f4",
+      "bytes": 41061
+    },
+    "docs/sources/perfectcorp-ai_clothes-openapi-20261019.yaml": {
+      "sha256": "78bf425096e6bc0f2ac85618001ab29a3e940d80b7b0bd8b8492493a90d05d8d",
+      "bytes": 37180
+    },
+    "docs/sources/perfectcorp-cloth-v4-get-20261019.md": {
+      "sha256": "39c20736f8085eec889644a24a031cdf87ecdfe696dc5c363b4f6b3134dd150f",
+      "bytes": 1191
+    },
+    "docs/sources/perfectcorp-cloth-v4-post-20261019.md": {
+      "sha256": "15b5d7f2b07e529334f40d3bc823772cb80941e8b2d58bdb6637c3bfc789c2c3",
+      "bytes": 2226
+    },
+    "docs/sources/perfectcorp-credit-20261019.md": {
+      "sha256": "e1e2a386839abb7aa40e325ad974d78a93fe4b8cbbbd31af7303da8985bb20d9",
+      "bytes": 1056
+    },
+    "docs/sources/perfectcorp-develop_error_codes-20261019.md": {
+      "sha256": "ad99aba8bd227917232637f53153455d065fbf25a4dadb23b28cf860fd6261c8",
+      "bytes": 1780
+    },
+    "docs/sources/perfectcorp-develop_file_retention_period-20261019.md": {
+      "sha256": "044bea4ba5383e8e07904aa1b509e755bea037b97f4a8f3920e83f48019d84b7",
+      "bytes": 657
+    },
+    "docs/sources/perfectcorp-develop_quick_start_guide-20261019.md": {
+      "sha256": "3b9f1ba52bde21b425df025516cf66b254fd776968ab32f2b34b272f1c275166",
+      "bytes": 1903
+    },
+    "docs/sources/perfectcorp-develop_rate_limit-20261019.md": {
+      "sha256": "4a3e69f0bc0368ffb29b5447d7b8eb63b029ca73ab76595d4fcc4ada24479d58",
+      "bytes": 1021
+    },
+    "docs/sources/perfectcorp-feature-cost-20261019.md": {
+      "sha256": "4de2daa22cc6fb49427fbdd73ae63df5a7fb2052bc4bd1795e3902316347be1a",
+      "bytes": 2083
+    },
+    "docs/sources/perfectcorp-file-post-20261019.md": {
+      "sha256": "027ae5970ee538046a6c1a2a953b16ebe31eb9615916634345a4cdff6d5aee26",
+      "bytes": 2467
+    },
+    "docs/sources/perfectcorp-reference_ai_clothes-20261019.md": {
+      "sha256": "c368207e6e65ccd978d7724e53c893807c5676612a2af7b3ed78f450b3a0de4f",
+      "bytes": 11537
+    },
+    "docs/sources/perfectcorp-reference_unit_system-20261019.md": {
+      "sha256": "eaa5c303a5fcf3a88f44f5253c4fa8bf8add1d84e68115a9ba22a5e9a30011d4",
+      "bytes": 1197
+    },
+    "docs/sources/perfectcorp-webhook-20261019.md": {
+      "sha256": "fc6dbf88df7d40084f7537b4f060a02f72d19fe24ab228ee9ea488fe21f6ba82",
+      "bytes": 6391
+    },
+    "docs/sources/youcam-api-terms-20261019.txt": {
+      "sha256": "23bce17be50f4416f0a180833bf5f80fb1f89d85fb874b99a816db1363221b94",
+      "bytes": 44324
+    },
+    "docs/test-report.md": {
+      "sha256": "f311a02ae04d1df529d4513d25cc432f6a2a562a93dd2b4dbc87bbb85abc280b",
+      "bytes": 4908
+    },
+    "fixtures/scenarios.json": {
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    "package.json": {
+      "sha256": "8ed2fec675f529419cdf4bf9a42df8990bb91c96d305c671607af2a208286574",
+      "bytes": 1716
+    },
+    "playwright.config.ts": {
+      "sha256": "53ce015af1bbce184d033ce2b2733d11d86a95358a3773aa51a8f83cb047d67e",
+      "bytes": 183
+    },
+    "pnpm-lock.yaml": {
+      "sha256": "c942728cd5b9ea8d672dfbb17de5af0ff1e56c9396c88c4e0d97c640965f35d1",
+      "bytes": 86031
+    },
+    "pnpm-workspace.yaml": {
+      "sha256": "b874a1ffd0ecf6869eb5d26b5ea288bfb3a4b8b8691ef62daff27577b239c842",
+      "bytes": 26
+    },
+    "scripts/check-env.ts": {
+      "sha256": "e71c57e5c81e90871bbf18e0b0dcdc469d69b7ce5804ed76ad4bee55478acd6c",
+      "bytes": 403
+    },
+    "scripts/gen-fixtures.ts": {
+      "sha256": "f4ef8eec6dda13c0eb4f0dbfa4a4d2b46edc4356756dc268b220bc90b6a77f79",
+      "bytes": 123
+    },
+    "scripts/grant-caller.mjs": {
+      "sha256": "ccf49ddcfaa66f7321d6a0353a2bb03966f0eb8130cbfcbde419a3ef76236b5e",
+      "bytes": 3242
+    },
+    "scripts/grant-one-root.py": {
+      "sha256": "88858964c84e50441aec6b22194ce18e82569f2d50e7436c0d9a7af161d08f32",
+      "bytes": 12596
+    },
+    "scripts/licenses.mjs": {
+      "sha256": "066b5257944e7376abe8d924241966178726645160fbcd37542bd9ad9e3c590b",
+      "bytes": 3452
+    },
+    "scripts/not-implemented.mjs": {
+      "sha256": "3a37764ac6efa2aab53b5a3e5998c625f7316ce6939a97f9bc50079e07f7f174",
+      "bytes": 100
+    },
+    "scripts/s2-pure-resolve.mjs": {
+      "sha256": "68efe2a10f86fba65d4a528122711c3511d3731cd7321e26c6d5b10ab74a93bc",
+      "bytes": 621
+    },
+    "src/domain/capabilities.ts": {
+      "sha256": "8b8f8b29dbde121a1139130449563947986beeeca94b41c25030168300d6ffe6",
+      "bytes": 1807
+    },
+    "src/domain/errors.ts": {
+      "sha256": "23b6168f5b963778b87862102c172d8505a1da4ccff6f9040b6c1b98419c8f50",
+      "bytes": 3139
+    },
+    "src/domain/job-machine.ts": {
+      "sha256": "32fedb815343bac65cb0872df9be244628986165c064a6b5815b4b5407d637ac",
+      "bytes": 12556
+    },
+    "src/domain/ledger.ts": {
+      "sha256": "7e034d28d2cda58e1caaad613394e87932b753d1f1c49227d41c5863dc01ca9a",
+      "bytes": 5394
+    },
+    "src/domain/listing.ts": {
+      "sha256": "eee76f1ab3ba9670ce502a820e660acb9f65a9daf5d52f3001e99710e965743b",
+      "bytes": 2019
+    },
+    "src/domain/quality/calibration.ts": {
+      "sha256": "0115833cb6e58fda952066896e6f505abc8b9a207456466351f81ff2420b01a0",
+      "bytes": 2234
+    },
+    "src/domain/quality/gate.ts": {
+      "sha256": "f33012a9873dc919e430e476d3164031bbe9ff173d98a122548857defa7696ce",
+      "bytes": 5697
+    },
+    "src/domain/quality/metrics.ts": {
+      "sha256": "4b9390c86672bb49fcb08531eb1fd5273498641da173114897f4ff25a6e75c4a",
+      "bytes": 2091
+    },
+    "src/domain/quality/thresholds.ts": {
+      "sha256": "57c2a3ed308a268ef485d6d3612bcc82ce12937fa0f51442a13a61f50fd11594",
+      "bytes": 483
+    },
+    "src/images/disclose.ts": {
+      "sha256": "3f5a6803d7261af6de023892bc3ee8fc592734f8013a53b57b59d2fc1320b801",
+      "bytes": 3190
+    },
+    "src/images/input-policy.ts": {
+      "sha256": "a47e236595fecd7609377b8aa3f011b8848f42645edda26eb8ac90dd900ba8f1",
+      "bytes": 2684
+    },
+    "src/images/native.ts": {
+      "sha256": "6c59487869fb0ddba27f9cc4f48522c79ce46147d6cfc4a399a74cc335e382d4",
+      "bytes": 682
+    },
+    "src/images/normalize.ts": {
+      "sha256": "734f2873f357ef66d34cdf36dd8d2ce5d31fa42fa28f467cd2b603ad5f7af34d",
+      "bytes": 2319
+    },
+    "src/images/raster-core.ts": {
+      "sha256": "1b1bf2f66e4ee566d772c74685434098253d9edc8203ae02a7e93086a469de4c",
+      "bytes": 1657
+    },
+    "src/images/raster.ts": {
+      "sha256": "015adc045fee792664e1e45c1ed7aa95165d6946c79be803c5ac5789faabfe74",
+      "bytes": 2203
+    },
+    "src/images/synth.ts": {
+      "sha256": "5f1e1b0078df9840f1a2ebade8d8b19f9d333f61a583bea544a8d27be77d3f0b",
+      "bytes": 3813
+    },
+    "src/server/app.ts": {
+      "sha256": "42c89cd6c4c39bad48c1465616d66a659b8b28c05679501059ae8107d71ab0c3",
+      "bytes": 3141
+    },
+    "src/server/env.ts": {
+      "sha256": "0e1cee310a75d7608974d233d09ab88474455990c7a955d32dd5397599ed6d8d",
+      "bytes": 515
+    },
+    "src/server/main.ts": {
+      "sha256": "b7b0d3a6cbf521a789bd91cc5ec99e1fdf10c20f417a183e0f6ace82efe15e44",
+      "bytes": 6172
+    },
+    "src/server/routes/fixture.ts": {
+      "sha256": "e0c19fefc9c3554af029aed4c0e9aaad1beae3d12d2cff4b5f0d916a42a49d62",
+      "bytes": 12865
+    },
+    "src/server/runner.ts": {
+      "sha256": "ad6db98b1d29906e653d768118314ae3a5b97994e1c465220f049ff8fb992741",
+      "bytes": 12451
+    },
+    "src/server/store.ts": {
+      "sha256": "a184c6a4e0ad53b033493a2637b2641023f6a458da52a1e51852d93661702c3e",
+      "bytes": 6289
+    },
+    "src/server/ttl-sweeper.ts": {
+      "sha256": "04ec849a2fa3a02e11a5f540deea16302bb8ef17a93c6876bed6625e2865d143",
+      "bytes": 2337
+    },
+    "src/shared/banned-phrases.ts": {
+      "sha256": "1177c18d536125618951509734c3730813dd97ff7849f38323da5a2d14a89c18",
+      "bytes": 1708
+    },
+    "src/shared/copy.ts": {
+      "sha256": "a16232c818c2059710627596d8022793aa58636bf94d1e3eff417dd6dee88d27",
+      "bytes": 6324
+    },
+    "src/shared/env.ts": {
+      "sha256": "2ea8a26a61d1b0f98d5c00ac2f3de379b0b5696c174db0cf521aab5c1475cbaa",
+      "bytes": 2632
+    },
+    "src/shared/measurements.ts": {
+      "sha256": "5c7b2ecaababf464e62b280a4b9d98827ffb84a9f4462911c61cfddbbc849996",
+      "bytes": 2352
+    },
+    "src/shared/schemas.ts": {
+      "sha256": "1c6a63620e580c6fe63ca2cc7f67834e57a486b7f887b9bdf1e0c22d56a9b983",
+      "bytes": 9548
+    },
+    "src/shared/types.ts": {
+      "sha256": "5f6e92771391e8ca30d70c79f2d1b4f04fc5ad90202e2ad098c52a78c7ba5962",
+      "bytes": 9302
+    },
+    "src/youcam/client.ts": {
+      "sha256": "c19a2bc197a7f69ccb57284f62b4343ad4e52c7aa9a92f067206b8c6fb048400",
+      "bytes": 1860
+    },
+    "src/youcam/fixture-client.ts": {
+      "sha256": "fbed9eff87edc6eeee0c2b3c0c5fa2cb3dcfda3c1d2f1f91db3d0c776ae7f56d",
+      "bytes": 4920
+    },
+    "src/youcam/http-client.ts": {
+      "sha256": "e9757eb89a1f5c849a7e9d22d8ba1873b9c9db6b6d8b08e4ec4f16163faad24e",
+      "bytes": 7519
+    },
+    "src/youcam/limits.ts": {
+      "sha256": "827c647a08f0395184eccd2db0eb27c09767dc32fd5760441f8fee49f1c2b809",
+      "bytes": 3151
+    },
+    "src/youcam/net-policy.ts": {
+      "sha256": "dcf5564794cdc965dd4c3530c35395cdcec931eb780a2fd11d0fcdd1878e4613",
+      "bytes": 3226
+    },
+    "src/youcam/operations.ts": {
+      "sha256": "430b41d84c723217f3be8f33f70ed5390d6b4f72dcefcc012ab61978a1151973",
+      "bytes": 2182
+    },
+    "src/youcam/preflight-run.ts": {
+      "sha256": "ceaebc383b0f448aff1485a15b151e6ecb6771578b651f87d52e013770951c26",
+      "bytes": 1659
+    },
+    "src/youcam/preflight.ts": {
+      "sha256": "cbb51077cfb404fff039be6454377e0f18bb8da6bc49719a36ebb9f849d7adea",
+      "bytes": 1274
+    },
+    "src/youcam/rate-limiter.ts": {
+      "sha256": "663614fa61f1bde281d68a4a74b6763633c5d2e739f7a3cf4098b9b72bcb37c4",
+      "bytes": 3300
+    },
+    "src/youcam/redact.ts": {
+      "sha256": "feb6ba4145f2f88f85e068ea06cf569e40e6ea276238f6e9fde6bde013e96f28",
+      "bytes": 1200
+    },
+    "src/youcam/transport.ts": {
+      "sha256": "61cea50bba517ec03e9436f6a61585e5bfd9ebcedfc4a6453b92930386303dcf",
+      "bytes": 3833
+    },
+    "src/youcam/workflow-state.ts": {
+      "sha256": "135c2aed35db9198d7f81e84bd79238ef59683740628f3f6dc68155d8494ff1f",
+      "bytes": 4577
+    },
+    "tests/img/calibration.test.ts": {
+      "sha256": "a18c20f8cd8854c1d35ebcd9dc38bbd161cb3889393dcfb771d74c9214381f1b",
+      "bytes": 1782
+    },
+    "tests/img/decode-bounds.test.ts": {
+      "sha256": "af4ec5eef7242009de72146151a8ccdd1cafae315fbd99d7a0bd0154d0ecde05",
+      "bytes": 4859
+    },
+    "tests/img/normalize.test.ts": {
+      "sha256": "2438bed7f630aad8b2ba9ab7b8b6f04d2ab8daa467a91826fe80652579ffe546",
+      "bytes": 3257
+    },
+    "tests/img/synth.test.ts": {
+      "sha256": "0a2cac8cff4c3ba64d66bd0623c25369864c7f9bd95da4466778efcedaba07ca",
+      "bytes": 1320
+    },
+    "tests/int/env-startup.test.ts": {
+      "sha256": "6cf37ba8fb5b249be824492f65d549c0658c5f65c98c11ddeb66b56223e4ce85",
+      "bytes": 1372
+    },
+    "tests/int/fixture-api-checkpoint.test.ts": {
+      "sha256": "cef3a22b335604885762f656a622f9d997d784c7c1c4b588efcc190e861a4a2c",
+      "bytes": 5549
+    },
+    "tests/property/job-machine.test.ts": {
+      "sha256": "4aff1491898c6f0abd676409308a8bfbb222416782271be4bde8df5902ce953c",
+      "bytes": 4187
+    },
+    "tests/property/listing-copy.test.ts": {
+      "sha256": "6147709608e1f09f21a072a331cefd06cccd90bb1cc2d5901acef2e6c9e8bcf8",
+      "bytes": 1608
+    },
+    "tests/property/measurements.test.ts": {
+      "sha256": "046b15e3e078b30d767f53e2e2c5dd546073f864faec5c7690b31b5b5e3ae087",
+      "bytes": 954
+    },
+    "tests/property/rate-limiter.test.ts": {
+      "sha256": "58a62b54775eb345f1b74fac30751f3eef711a2e79717cd0aade5f2fde39700a",
+      "bytes": 2720
+    },
+    "tests/unit/capabilities.test.ts": {
+      "sha256": "54bf10a57739069b1fa3f81ed08d5f89d3de5888b69af2d18ec3931a59a50340",
+      "bytes": 1275
+    },
+    "tests/unit/copy.test.ts": {
+      "sha256": "5aed28e48a145d087718b8d56de75e46d8b6fb6458c5a9555727a80a66ca45f4",
+      "bytes": 3549
+    },
+    "tests/unit/env.test.ts": {
+      "sha256": "fca620e528230e937c262f389decea05578db2a89cd63a398b2d87c78b6179cb",
+      "bytes": 1417
+    },
+    "tests/unit/errors.test.ts": {
+      "sha256": "847b06550f7f7cee7b41aaead206ca785bbe85e97f16ca2ae6f2b93308952f30",
+      "bytes": 7632
+    },
+    "tests/unit/image-calibration.test.ts": {
+      "sha256": "7474ee7ad05920faa6ef1603d7dce8311a3f6a9b5a091d9ce84d8dbd38168257",
+      "bytes": 2128
+    },
+    "tests/unit/image-input-policy.test.ts": {
+      "sha256": "39c9a188aa2dfbaeb59715aacfe96aed77258d6e2f4d849225a3e068aed4f12c",
+      "bytes": 2374
+    },
+    "tests/unit/image-metrics.test.ts": {
+      "sha256": "70893a5893328bf2f820f969732cf3bf67fa1e1799aa60f8ed659be2a83422a5",
+      "bytes": 3172
+    },
+    "tests/unit/job-machine.test.ts": {
+      "sha256": "46913b6d9aca7c5f60b575dd68b1f455fa155a35de8fe4b2b7987bb20121194f",
+      "bytes": 10075
+    },
+    "tests/unit/ledger.test.ts": {
+      "sha256": "60574ec194a880f0c75b83ae1047885a2387e3714fdc3f978a75524017bd061c",
+      "bytes": 5686
+    },
+    "tests/unit/listing.test.ts": {
+      "sha256": "1134093361b440cc2b51e07c4293dafa03b51a5d312acaff6989bf58236bb329",
+      "bytes": 1585
+    },
+    "tests/unit/measurements.test.ts": {
+      "sha256": "4d13fa9da2b03204fb9f53781ae9ed93ce2467b91d9b59471d8d66ceda49fbb4",
+      "bytes": 1280
+    },
+    "tests/unit/net-policy.test.ts": {
+      "sha256": "b63c2b618d67f8d99883d9791bbb6efffdb8f57bf9e7c9b147ae7656e817cd49",
+      "bytes": 1634
+    },
+    "tests/unit/pure-imports.test.ts": {
+      "sha256": "c893afc7c4054a967a4c3bcde20ff3dbb19609e94ce51aef095a09f5239b6c50",
+      "bytes": 2036
+    },
+    "tests/unit/quality-gate.test.ts": {
+      "sha256": "575f74cb30681110163476b7c3b4c9201552b4ecf75f64795b72476238dd57ea",
+      "bytes": 2666
+    },
+    "tests/unit/s2-fixture-state.node.ts": {
+      "sha256": "70ec00b18d91c5e3bdd18cbb553bd6240085e3fe93f9a1c5294211828c8aefa5",
+      "bytes": 7785
+    },
+    "tests/unit/schemas.test.ts": {
+      "sha256": "57cea0ca86e9f403ff34d73ddb5f0880df22094d69af07358d142b40ab59abca",
+      "bytes": 5591
+    },
+    "tests/unit/sku-binding.test.ts": {
+      "sha256": "0feb2bbdbb81cc921bffff3451d2e044e09c3c9a5b130ae6e1ca64b7efc1a953",
+      "bytes": 1397
+    },
+    "tsconfig.json": {
+      "sha256": "50413747745fffeb155fb9d0fb38b6d49a8d9013ee86c477d6af416b78bfd5dd",
+      "bytes": 515
+    },
+    "vite.config.ts": {
+      "sha256": "22185a1378ed0d803bfd96ec869b7ff3f4820fb5163f3360a162066023878131",
+      "bytes": 310
+    },
+    "vitest.config.ts": {
+      "sha256": "0c8c65dd835b866c6f64e9861b002c8545c712c4eb8082386bdcfb09250e64be",
+      "bytes": 232
+    },
+    "vitest.img.config.ts": {
+      "sha256": "04ba5562391f522046204245a9908b8a7705a9858cfadfe060860780b7a90578",
+      "bytes": 213
+    },
+    "vitest.int.config.ts": {
+      "sha256": "9864bae8c369ea80acf9f4984eb8ee537e6fa95180957919017b5ee3858ce0d8",
+      "bytes": 273
+    },
+    "vitest.pure.config.ts": {
+      "sha256": "fea76f5fcf43bf3aa5405443171ebc931f0ac120b8aa563a497d495c68f107d1",
+      "bytes": 245
+    }
+  }
+}

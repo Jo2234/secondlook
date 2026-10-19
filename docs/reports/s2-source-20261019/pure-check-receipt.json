@@ -1,0 +1,47 @@
+{
+  "schema": "youcam-new-pure-check/1",
+  "source": "7da22615967ecab6216284d0b4574dc5cd3744d7",
+  "sourcePins": {
+    "scripts/s2-pure-resolve.mjs": "68efe2a10f86fba65d4a528122711c3511d3731cd7321e26c6d5b10ab74a93bc",
+    "tests/unit/s2-fixture-state.node.ts": "70ec00b18d91c5e3bdd18cbb553bd6240085e3fe93f9a1c5294211828c8aefa5",
+    "src/youcam/fixture-client.ts": "fbed9eff87edc6eeee0c2b3c0c5fa2cb3dcfda3c1d2f1f91db3d0c776ae7f56d",
+    "src/youcam/client.ts": "c19a2bc197a7f69ccb57284f62b4343ad4e52c7aa9a92f067206b8c6fb048400",
+    "src/youcam/operations.ts": "430b41d84c723217f3be8f33f70ed5390d6b4f72dcefcc012ab61978a1151973",
+    "src/youcam/redact.ts": "feb6ba4145f2f88f85e068ea06cf569e40e6ea276238f6e9fde6bde013e96f28",
+    "src/youcam/workflow-state.ts": "135c2aed35db9198d7f81e84bd79238ef59683740628f3f6dc68155d8494ff1f",
+    "src/youcam/preflight-run.ts": "ceaebc383b0f448aff1485a15b151e6ecb6771578b651f87d52e013770951c26",
+    "src/youcam/preflight.ts": "cbb51077cfb404fff039be6454377e0f18bb8da6bc49719a36ebb9f849d7adea",
+    "src/youcam/limits.ts": "827c647a08f0395184eccd2db0eb27c09767dc32fd5760441f8fee49f1c2b809",
+    "src/domain/job-machine.ts": "32fedb815343bac65cb0872df9be244628986165c064a6b5815b4b5407d637ac",
+    "src/domain/errors.ts": "23b6168f5b963778b87862102c172d8505a1da4ccff6f9040b6c1b98419c8f50"
+  },
+  "cwd": "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/projects/youcam-wt/slot1",
+  "argv": [
+    "/Users/johanvaz/.local/share/vite-plus/js_runtime/node/24.22.0/bin/node",
+    "--import",
+    "./scripts/s2-pure-resolve.mjs",
+    "--test",
+    "--test-isolation=none",
+    "tests/unit/s2-fixture-state.node.ts"
+  ],
+  "exactSuppliedEnv": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "TZ": "UTC",
+    "CI": "true"
+  },
+  "pid": 67045,
+  "exitCode": 0,
+  "workSeconds": 0.7863265050000001,
+  "reason": null,
+  "signals": [],
+  "rootReaped": true,
+  "EOF": {
+    "stdout": true,
+    "stderr": true
+  },
+  "stdioClosed": true,
+  "combinedOutputBytes": 979,
+  "qualification": "Retained direct root only. No descendant/global absence, OS hard resource quota or runtime loaded-image proof. No filesystem/server/native/HTTP code was intentionally imported by the test graph."
+}
