@@ -1,5 +1,8 @@
-import type { HealthResponse, JobsResponse, ListingResponse, ListingWriteRequest, ModelsResponse, PhotoUploadResponse, QualityReport, TryOnJob, TryOnRequest, UnitsResponse, GarmentDeclaration } from '../shared/types.js';
+import type { HealthResponse, JobsResponse, ListingResponse, ListingWriteRequest, ModelsResponse, PhotoUploadResponse, QualityReport, TryOnJob, UnitsResponse, GarmentDeclaration } from '../shared/types.js';
 import { COPY } from '../shared/copy.js';
+import { TryOnJobSchema, QualityReportSchema, TryOnRequestSchema } from '../shared/schemas.js';
+import { correlatedJobs, observedFixtureRefusal, fixtureBody, fixtureHealth, fixtureModels, inspectedJobs } from './fixture-admission.js';
+import type { FixtureReview } from './fixture-admission.js';
 
 const ID = /^[0-9a-z]{20}$/;
 const MAX_RESPONSE = 1024 * 1024;
@@ -35,10 +38,10 @@ function listing(v: unknown): boolean {
   return object(v) && v.mode === 'fixture' && identifier(v.id) && text(v.title, 80) && text(v.conditionNotes, 500) && (v.priceText === null || text(v.priceText, 20)) && list(v.garmentPhotoIds, 32, identifier) && list(v.tryOnResultIds, 4096, identifier) && (v.declaration === null || declaration(v.declaration)) && (v.measurements === null || measurements(v.measurements)) && date(v.createdAt) && date(v.updatedAt) && object(v.readiness) && typeof v.readiness.ready === 'boolean' && list(v.readiness.missing, 32, x => text(x, 80));
 }
 function quality(v: unknown): boolean {
-  return object(v) && identifier(v.photoId) && v.role === 'garment' && severity(v.verdict) && typeof v.spendAllowed === 'boolean' && text(v.thresholdsVersion, 80) && (v.capability === null || object(v.capability) && category(v.capability.category) && text(v.capability.status, 40) && text(v.capability.photoType, 40)) && list(v.checks, 64, check => object(check) && text(check.id, 80) && severity(check.severity) && (check.measured === null || text(check.measured, 256) || typeof check.measured === 'number' && Number.isFinite(check.measured)) && text(check.threshold, 256) && text(check.messageKey, 80) && Object.hasOwn(COPY.quality, check.messageKey) && ['pixel', 'declaration', 'capability', 'doc_spec'].includes(check.source as string));
+  return QualityReportSchema.safeParse(v).success && object(v) && identifier(v.photoId) && v.role === 'garment' && severity(v.verdict) && typeof v.spendAllowed === 'boolean' && text(v.thresholdsVersion, 80) && (v.capability === null || object(v.capability) && category(v.capability.category) && text(v.capability.status, 40) && text(v.capability.photoType, 40)) && list(v.checks, 64, check => object(check) && text(check.id, 80) && severity(check.severity) && (check.measured === null || text(check.measured, 256) || typeof check.measured === 'number' && Number.isFinite(check.measured)) && text(check.threshold, 256) && text(check.messageKey, 80) && Object.hasOwn(COPY.quality, check.messageKey) && ['pixel', 'declaration', 'capability', 'doc_spec'].includes(check.source as string));
 }
 function job(v: unknown): boolean {
-  return object(v) && v.mode === 'fixture' && identifier(v.id) && nullableId(v.listingId) && identifier(v.garmentPhotoId) && identifier(v.modelPhotoId) && text(v.requestId, 64) && nullableId(v.resultImageId) && Array.isArray(v.attempts) && v.attempts.length > 0 && list(v.attempts, 128, a => object(a) && integer(a.n) && a.n > 0 && ['queued', 'uploading', 'submitting', 'polling', 'downloading', 'succeeded', 'failed', 'timed_out', 'uncertain', 'cancelled'].includes(a.state as string) && (a.error === null || object(a.error) && text(a.error.code, 160) && text(a.error.messageKey, 80) && Object.hasOwn(COPY.errors, a.error.messageKey)));
+  return TryOnJobSchema.safeParse(v).success && object(v) && v.mode === 'fixture' && identifier(v.id) && nullableId(v.listingId) && identifier(v.garmentPhotoId) && identifier(v.modelPhotoId) && text(v.requestId, 64) && nullableId(v.resultImageId) && Array.isArray(v.attempts) && v.attempts.length > 0 && list(v.attempts, 128, a => object(a) && integer(a.n) && a.n > 0 && ['queued', 'uploading', 'submitting', 'polling', 'downloading', 'succeeded', 'failed', 'timed_out', 'uncertain', 'cancelled'].includes(a.state as string) && (a.error === null || object(a.error) && text(a.error.code, 160) && text(a.error.messageKey, 80) && Object.hasOwn(COPY.errors, a.error.messageKey)));
 }
 function units(v: R): boolean {
   return integer(v.budgetCu) && integer(v.committedCu) && integer(v.remainingBudgetCu) && (v.balanceEstimateCu === null || integer(v.balanceEstimateCu)) && list(v.ledger, 4096, e => object(e) && identifier(e.id) && identifier(e.jobId) && integer(e.attempt) && integer(e.cu) && ['reserved', 'spent', 'released', 'possibly_spent'].includes(e.state as string) && text(e.reason, 512));
@@ -48,12 +51,14 @@ function units(v: R): boolean {
 export class SellerApi {
   private verifiedFixture = false;
   private active = new Set<AbortController>();
-  async call<T>(path: string, method = 'GET', body?: unknown, valid: (value: R) => boolean = () => false): Promise<T> {
+  async call<T>(path: string, method = 'GET', body?: unknown, valid: (value: R) => boolean = () => false, admission?: FixtureReview): Promise<T> {
     if (!/^\/api\/[a-z0-9/_-]+$/.test(path) || !['127.0.0.1', 'localhost'].includes(location.hostname) || location.protocol !== 'http:') throw new ApiError('origin_refused');
     const mutation = method !== 'GET';
-    // Owned server admission is under end-to-end validation. Keep browser admission
-    // blocked until durable IDs, progress and cancellation are verified together.
-    if (mutation && /\/(?:tryon|retry)(?:\/|$)/.test(path)) throw new ApiError('admission_contract_unavailable');
+    // Only the reviewed fixture generate seam is open; retry and buyer admission stay closed.
+    const fixtureGenerate = method === 'POST' && admission !== undefined
+      && path === `/api/listings/${id(admission.listingId)}/tryon`
+      && JSON.stringify(body) === JSON.stringify(fixtureBody(admission));
+    if (mutation && /\/(?:tryon|retry)(?:\/|$)/.test(path) && !fixtureGenerate) throw new ApiError('admission_contract_unavailable');
     if (mutation && !this.verifiedFixture) throw new ApiError('fixture_required');
     const controller = new AbortController(); this.active.add(controller);
     const timer = setTimeout(() => controller.abort(), 15000);
@@ -82,7 +87,7 @@ export class SellerApi {
       if (!response.ok) {
         const code = typeof value.error === 'string' && /^[a-z0-9_]{1,80}$/.test(value.error) ? value.error : 'request_refused';
         const invalidPhoto = path === '/api/photos' && method === 'POST' && response.status === 422 && code === 'image_invalid';
-        throw new ApiError(code, mutation && !(invalidPhoto || response.status < 500 && DEFINITIVE.has(code)), response.status);
+        throw new ApiError(code, mutation && !(fixtureGenerate ? observedFixtureRefusal(value, response.status) : invalidPhoto || response.status < 500 && DEFINITIVE.has(code)), response.status);
       }
       // Invalid success envelopes after a write are uncertain, just like malformed JSON.
       if (!valid(value)) throw new ApiError('response_invalid');
@@ -97,10 +102,10 @@ export class SellerApi {
   }
   async health(): Promise<HealthResponse> {
     this.verifiedFixture = false;
-    const result = await this.call<HealthResponse>('/api/health', 'GET', undefined, v => text(v.version, 80) && text(v.thresholdsVersion, 80) && v.buyerUpload === 'disabled' && list(v.capabilities, 64, object));
+    const result = await this.call<HealthResponse>('/api/health', 'GET', undefined, v => fixtureHealth(v) && text(v.version, 80) && text(v.thresholdsVersion, 80) && list(v.capabilities, 64, object));
     this.verifiedFixture = result.mode === 'fixture' && result.buyerUpload === 'disabled'; return result;
   }
-  models = () => this.call<ModelsResponse>('/api/models', 'GET', undefined, v => list(v.models, 1024, m => object(m) && identifier(m.photoId) && text(m.label, 256) && typeof m.synthetic === 'boolean' && text(m.source, 80)) && new Set((v.models as R[]).map(m => m.photoId)).size === (v.models as R[]).length);
+  models = () => this.call<ModelsResponse>('/api/models', 'GET', undefined, v => fixtureModels(v) && list(v.models, 1024, m => object(m) && identifier(m.photoId) && text(m.label, 256) && typeof m.synthetic === 'boolean' && text(m.source, 80)) && new Set((v.models as R[]).map(m => m.photoId)).size === (v.models as R[]).length);
   listings = () => this.call<{ mode: 'fixture'; listings: ListingResponse[] }>('/api/listings', 'GET', undefined, v => list(v.listings, 4096, listing));
   listing = (value: string) => this.call<ListingResponse>(`/api/listings/${id(value)}`, 'GET', undefined, v => listing(v) && v.id === value);
   units = () => this.call<UnitsResponse>('/api/units', 'GET', undefined, units);
@@ -110,7 +115,18 @@ export class SellerApi {
   }
   evaluate = (value: string, declaration: GarmentDeclaration) => this.call<QualityReport>(`/api/photos/${id(value)}/evaluate`, 'POST', { declaration }, v => quality(v) && v.photoId === value);
   save = (value: string | null, body: ListingWriteRequest) => this.call<ListingResponse>(value ? `/api/listings/${id(value)}` : '/api/listings', value ? 'PATCH' : 'POST', body, v => listing(v) && (value === null || v.id === value));
-  async generate(_value: string, _body: TryOnRequest): Promise<JobsResponse> { throw new ApiError('admission_contract_unavailable'); }
+  generate(review: FixtureReview): Promise<JobsResponse> {
+    const body = fixtureBody(review);
+    return this.call(`/api/listings/${id(review.listingId)}/tryon`, 'POST', body, v => correlatedJobs(v, review) !== null, review);
+  }
+  lookup(review: FixtureReview): Promise<JobsResponse> {
+    fixtureBody(review);
+    return this.call(`/api/tryon-requests/${review.requestId}`, 'GET', undefined, v => correlatedJobs(v, review) !== null);
+  }
+  inspectRequest(requestId: string): Promise<JobsResponse> {
+    if (!TryOnRequestSchema.shape.requestId.safeParse(requestId).success) throw new ApiError('request_id_invalid');
+    return this.call(`/api/tryon-requests/${requestId}`, 'GET', undefined, v => inspectedJobs(v, requestId) !== null);
+  }
   job = (value: string) => this.call<TryOnJob>(`/api/jobs/${id(value)}`, 'GET', undefined, v => job(v) && v.id === value);
   cancel = (value: string) => this.call<TryOnJob>(`/api/jobs/${id(value)}/cancel`, 'POST', {}, v => job(v) && v.id === value);
   dispose(): void { for (const controller of this.active) controller.abort(); this.active.clear(); }

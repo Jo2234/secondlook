@@ -5,6 +5,11 @@ import { compareMeasurements, formatMeasurement, measurementProblems, parseMeasu
 import { listingText } from '../domain/listing.js';
 import type { GarmentDeclaration, HealthResponse, ListingResponse, ListingWriteRequest, MeasurementField, Measurements, ModelOption, QualityReport, TryOnJob, Unit, UnitsResponse } from '../shared/types.js';
 import { ApiError, mediaUrl, SellerApi } from './api.js';
+import { FixtureAdmission, sameJobIdentity } from './fixture-admission.js';
+import type { FixtureInputs, FixtureReview } from './fixture-admission.js';
+
+// Session memory only. React remounts retain ownership; a full navigation cannot recover it.
+const fixtureAdmission = new FixtureAdmission();
 
 const DEFAULT_DECLARATION: GarmentDeclaration = { photoType: 'hanger', category: 'upper_body', singleGarment: false, frontFacing: false, notComposite: false, fullyVisible: false, noPeopleInPhoto: false };
 const EMPTY: ListingWriteRequest = { title: '', conditionNotes: '', priceText: null, garmentPhotoIds: [], declaration: null, measurements: null };
@@ -12,7 +17,7 @@ const ACTIVE = new Set(['queued', 'uploading', 'submitting', 'polling', 'downloa
 function fixtureListingText(listing: ListingResponse): string {
   return [listingText({ ...listing, tryOnResultIds: [] }), listing.tryOnResultIds.length ? COPY.mode.fixtureImage : '', C.copyData].filter(Boolean).join('\n\n');
 }
-type CostReview = Readonly<{ listingId: string; savedAt: string; photoId: string; modelIds: readonly string[]; declarationKey: string; requestId: string }>;
+type CostReview = FixtureReview;
 function valuesFor(m: Measurements | null): Partial<Record<MeasurementField, string>> {
   return Object.fromEntries(Object.entries(m?.valuesMm ?? {}).map(([key, value]) => [key, value === 'na' ? 'na' : String(m?.enteredUnit === 'in' ? Math.round(value / 25.4 * 4) / 4 : value / 10)]));
 }
@@ -26,8 +31,8 @@ function ReviewDialog({ review, title, onConfirm, onClose, busy }: { review: Cos
   useEffect(() => { const previous = document.activeElement; dialog.current?.showModal(); cancel.current?.focus(); return () => { dialog.current?.close(); if (previous instanceof HTMLElement && previous.isConnected) previous.focus(); }; }, []);
   return <dialog ref={dialog} aria-labelledby="cost-heading" aria-describedby="cost-detail" onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
     <span className="eyebrow">{C.simulated}</span><h2 id="cost-heading">{C.costTitle}</h2><p id="cost-detail">{C.costBody}</p><p>{C.modalContext}</p>
-    <dl><dt>{C.title}</dt><dd>{title}</dd><dt>{C.original}</dt><dd className="mono">{review.photoId}</dd><dt>{C.modelCount}</dt><dd>{review.modelIds.length}</dd><dt>{C.request}</dt><dd className="mono">{review.requestId}</dd></dl>
-    <p>{C.admissionUnavailable}</p><div className="actions"><button ref={cancel} disabled={busy} onClick={onClose}>{C.cancel}</button><button className="primary" disabled onClick={onConfirm}>{C.confirm}</button></div>
+    <dl><dt>{C.title}</dt><dd>{title}</dd><dt>{C.listings}</dt><dd className="mono">{review.listingId}</dd><dt>{C.original}</dt><dd className="mono">{review.photoId}</dd><dt>{C.timestamp}</dt><dd>{review.savedAt}</dd><dt>{C.declaration}</dt><dd>{C.types[review.declaration.photoType]} · {C.categories[review.declaration.category]}<ul>{(Object.keys(C.declarations) as (keyof typeof C.declarations)[]).map(key => <li key={key}>{review.declaration[key] ? '✓' : '—'} {C.declarations[key]}</li>)}</ul></dd><dt>{C.modelCount}</dt><dd>{review.modelIds.join(', ')}</dd><dt>{C.request}</dt><dd className="mono">{review.requestId}</dd></dl>
+    <p>{C.fixtureAdmission}</p><div className="actions"><button ref={cancel} disabled={busy} onClick={onClose}>{C.cancel}</button><button className="primary" disabled={busy} onClick={onConfirm}>{C.confirm}</button></div>
   </dialog>;
 }
 function Compare({ item }: { item: Measurements }) {
@@ -53,32 +58,45 @@ export function App() {
   const [measurementText, setMeasurementText] = useState<Partial<Record<MeasurementField, string>>>({}), [tagSize, setTagSize] = useState('');
   const originalMeasurements = useRef<Measurements | null>(null), editedMeasurements = useRef(new Set<MeasurementField>());
   const [selectedModels, setSelectedModels] = useState<string[]>([]), [review, setReview] = useState<CostReview | null>(null);
+  const [admissionState, setAdmissionState] = useState(() => fixtureAdmission.snapshot());
+  const [lookupId, setLookupId] = useState(''), [inspected, setInspected] = useState<TryOnJob[]>([]);
   const [jobs, setJobs] = useState<TryOnJob[]>([]), [busy, setBusy] = useState(false), [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null), [unknown, setUnknown] = useState(false), [copyStatus, setCopyStatus] = useState('');
-  const disabled = busy || unknown || health?.mode !== 'fixture';
+  const disabled = busy || unknown || fixtureAdmission.blocksMutations() || Boolean(review) || health?.mode !== 'fixture';
+  const inputs = (): FixtureInputs => ({ health, listing: saved, photoId, declaration, quality, models, modelIds: selectedModels, dirty });
+  function syncAdmission() { if (mounted.current) setAdmissionState(fixtureAdmission.snapshot()); }
+  function closeReview() { if (review) fixtureAdmission.close(review); setReview(null); syncAdmission(); }
   async function reads() {
     const [l, u, m] = await Promise.all([api.listings(), api.units(), api.models()]);
     if (mounted.current) { setListings(l.listings.slice(0, 100)); setUnits(u); setModels(m.models.filter(x => x.synthetic).slice(0, 16)); }
   }
-  async function action(work: () => Promise<void>) {
-    if (working.current) return;
+  async function action(work: () => Promise<void>, readOnly = false) {
+    if (working.current || !readOnly && (unknown || fixtureAdmission.blocksMutations())) return;
     generation.current += 1;
     working.current = true; setBusy(true); setError(null);
     try { await work(); } catch (e) {
       if (mounted.current) { setError(e instanceof ApiError ? e.code : 'request_or_state_invalid'); if (e instanceof ApiError && e.uncertain) setUnknown(true); }
-    } finally { generation.current += 1; working.current = false; if (mounted.current) { setBusy(false); setPollEpoch(n => n + 1); } }
+    } finally { generation.current += 1; working.current = false; if (mounted.current) { setBusy(false); syncAdmission(); setPollEpoch(n => n + 1); } }
   }
   useEffect(() => {
     mounted.current = true;
-    void action(async () => { const h = await api.health(); if (mounted.current) setHealth(h); await reads(); });
+    const retained = fixtureAdmission.snapshot();
+    // An abandoned unsent dialog has no write to recover. Never discard checking/posting/unknown ownership.
+    if (retained.phase === 'review' && retained.review) fixtureAdmission.close(retained.review);
+    syncAdmission();
+    void action(async () => { const h = await api.health(); if (mounted.current) setHealth(h); await reads(); }, true);
     return () => { generation.current += 1; mounted.current = false; api.dispose(); };
   }, []);
   async function jobSnapshot(ids: string[], listingId: string | null) {
+    const ownerGeneration = generation.current;
+    const prior = [...jobs];
     const next = await Promise.all(ids.map(value => api.job(value)));
+    if (next.some(j => j.listingId !== listingId || j.buyerSessionId !== null || prior.some(p => p.id === j.id && !sameJobIdentity(p, j)))) throw new ApiError('job_identity_mismatch');
     const [u, l] = await Promise.all([api.units(), listingId ? api.listing(listingId) : Promise.resolve(null)]);
-    return { next, u, l };
+    return { next, u, l, ownerGeneration };
   }
   function publishJobs(snapshot: Awaited<ReturnType<typeof jobSnapshot>>) {
+    if (!mounted.current || generation.current !== snapshot.ownerGeneration) return;
     setJobs(snapshot.next); setUnits(snapshot.u);
     if (snapshot.l) { const listing = snapshot.l; setSaved(listing); setListings(old => old.map(l => l.id === listing.id ? listing : l)); }
   }
@@ -103,16 +121,17 @@ export function App() {
     };
     timer = setTimeout(tick, 1000); return () => { cancelled = true; clearTimeout(timer); };
   }, [jobIdsKey, saved?.id, pollEpoch]);
-  function invalidate() { setDirty(true); setReview(null); }
+  function invalidate() { setDirty(true); closeReview(); }
   function changeDeclaration(next: GarmentDeclaration) { setDeclaration(next); setQuality(null); invalidate(); }
   function choose(listing: ListingResponse | null) {
-    if (working.current) return;
+    if (working.current || unknown || fixtureAdmission.blocksMutations()) return;
+    closeReview();
     generation.current += 1;
     setSaved(listing); setDraft(listing ? { title: listing.title, conditionNotes: listing.conditionNotes, priceText: listing.priceText, garmentPhotoIds: [...listing.garmentPhotoIds], declaration: listing.declaration, measurements: listing.measurements } : { ...EMPTY, garmentPhotoIds: [] });
     setDeclaration(listing?.declaration ?? { ...DEFAULT_DECLARATION }); setPhotoId(listing?.garmentPhotoIds[0] ?? null); setQuality(null);
     setUnit(listing?.measurements?.enteredUnit ?? 'cm'); setMeasurementText(valuesFor(listing?.measurements ?? null)); setTagSize(listing?.measurements?.tagSize ?? '');
     originalMeasurements.current = listing?.measurements ?? null; editedMeasurements.current.clear();
-    setSelectedModels([]); setJobs([]); setReview(null); setDirty(false); setCopyStatus(''); setError(null);
+    setSelectedModels([]); setJobs([]); setReview(null); setDirty(false); setCopyStatus(''); setInspected([]); setError(null);
   }
   function measurements(): Measurements {
     const original = originalMeasurements.current;
@@ -139,41 +158,101 @@ export function App() {
       await reads();
     });
   }
+  const ledgerContextKnown = units !== null && fixtureAdmission.coversLedger(units.ledger.map(e => e.jobId));
   function openCostReview() {
-    setReview(null); setError('admission_contract_unavailable');
+    if (!ledgerContextKnown || working.current || disabled || jobs.length || !fixtureAdmission.canReview(inputs())) return;
+    try { setReview(fixtureAdmission.open(inputs(), crypto.randomUUID())); setError(null); syncAdmission(); }
+    catch { setError('fixture_review_unavailable'); }
   }
   function confirm() {
-    // Refuse even accidental direct invocation; there is no admission call here.
-    setReview(null); setError('admission_contract_unavailable');
+    if (!review || working.current || unknown || !ledgerContextKnown) return;
+    const r = review;
+    void action(async () => {
+      if (!fixtureAdmission.claim(r, inputs())) { setReview(null); syncAdmission(); throw new ApiError('review_stale'); }
+      syncAdmission();
+      const started = generation.current;
+      try {
+        const [h, l, m, u] = await Promise.all([api.health(), api.listing(r.listingId), api.models(), api.units()]);
+        if (!mounted.current || generation.current !== started) { fixtureAdmission.fail(r, null, 'review_interrupted'); return; }
+        setUnits(u);
+        if (!fixtureAdmission.coversLedger(u.ledger.map(e => e.jobId))) throw new ApiError('ledger_context_unavailable');
+        const body = fixtureAdmission.startPost(r, { ...inputs(), health: h, listing: l, models: m.models });
+        if (!body) throw new ApiError('review_stale');
+        syncAdmission();
+        // No retry path: the controller owns this UUID before the first asynchronous write.
+        const result = await api.generate(r);
+        const accepted = fixtureAdmission.found(r, result);
+        if (!accepted) throw new ApiError('admission_identity_mismatch', true);
+        if (mounted.current && generation.current === started) { setJobs(accepted); setReview(null); setUnknown(false); }
+      } catch (e) {
+        fixtureAdmission.fail(r, e instanceof ApiError && !e.uncertain ? e.status : null, e instanceof ApiError ? e.code : 'admission_unknown');
+        if (mounted.current) { setReview(null); if (fixtureAdmission.snapshot().phase === 'unknown') setUnknown(true); }
+        throw e;
+      } finally { syncAdmission(); }
+    });
+  }
+  function reconcile() {
+    const state = fixtureAdmission.snapshot(), r = state.review;
+    if (!r || !['unknown', 'accepted'].includes(state.phase)) return;
+    void action(async () => {
+      const started = generation.current;
+      try {
+        const result = await api.lookup(r);
+        const accepted = fixtureAdmission.found(r, result);
+        if (!accepted) throw new ApiError('admission_identity_mismatch');
+        if (mounted.current && generation.current === started) {
+          if (state.phase === 'unknown') setUnknown(false);
+          // Read-only resolution may outlive a selection; never replace another listing.
+          if (saved?.id === r.listingId) setJobs(accepted);
+        }
+      } catch (e) {
+        fixtureAdmission.missing(r); // 404, malformed and unavailable reads all retain uncertainty.
+        throw e;
+      } finally { syncAdmission(); }
+    }, true);
+  }
+  function lookupRequest() {
+    // With no frozen context this is inspection only, never adoption or POST permission.
+    if (!saved || admissionState.review || working.current) return;
+    void action(async () => {
+      // Full job envelopes are read via the bounded API; no new request identity is minted.
+      const started = generation.current;
+      const result = await api.inspectRequest(lookupId);
+      if (mounted.current && generation.current === started) { setInspected(result.jobs); setError(null); }
+    }, true);
   }
   const terminalProblem = jobs.some(job => ['failed', 'timed_out', 'uncertain', 'cancelled'].includes(job.attempts.at(-1)?.state ?? ''));
-  const canGenerate = false;
+  const canGenerate = ledgerContextKnown && !disabled && !jobs.length && fixtureAdmission.canReview(inputs());
   async function readKnownJob(value: string) {
     if (!saved) return;
     await action(async () => {
       const next = await api.job(value);
-      if (next.listingId !== saved.id) throw new ApiError('job_listing_mismatch');
+      if (next.listingId !== saved.id || next.buyerSessionId !== null) throw new ApiError('job_listing_mismatch');
       publishJobs(await jobSnapshot([...new Set([...jobs.map(j => j.id), next.id])], saved.id));
-    });
+    }, true);
   }
   async function cancelKnownJob(value: string) {
     if (disabled) return;
     await action(async () => {
+      const prior = jobs.find(j => j.id === value);
+      const started = generation.current;
       const next = await api.cancel(value);
+      if (!mounted.current || generation.current !== started) return;
+      if (!prior || !sameJobIdentity(prior, next)) throw new ApiError('job_identity_mismatch', true);
       // Retain the acknowledged cancel even if a subsequent read fails.
       setJobs(old => old.map(job => job.id === next.id ? next : job));
       publishJobs(await jobSnapshot(jobs.map(j => j.id), saved?.id ?? null));
     });
   }
   return <><div className="mode-banner" role="status"><b>DEMO</b><span>{COPY.mode.fixture}</span></div>
-    <header><a className="brand" href="#top" aria-label={C.brand}><span className="brand-mark">S</span>{C.brand}<small>{C.studio}</small></a><button disabled={busy} onClick={() => void action(async () => { const h = await api.health(); setHealth(h); await reads(); })}>{C.refresh}</button></header>
+    <header><a className="brand" href="#top" aria-label={C.brand}><span className="brand-mark">S</span>{C.brand}<small>{C.studio}</small></a><button disabled={busy} onClick={() => void action(async () => { const h = await api.health(); setHealth(h); await reads(); }, true)}>{C.refresh}</button></header>
     <main id="top"><section className="hero"><div><span className="eyebrow">{C.eyebrow}</span><h1>{C.heading}</h1><p>{C.intro}</p></div><div className="hero-note"><span>01—03</span><p>{C.fixtureOnly}</p></div></section>
       {!health && <p className="notice">{busy ? C.connecting : C.disconnected}</p>}
-      {unknown && <div role="alert" className="notice danger"><strong>{C.unknown}</strong><p>{C.unknownAdmission}</p></div>}
+      {(unknown || admissionState.phase === 'unknown' || admissionState.phase === 'posting') && <div role="alert" className="notice danger"><strong>{C.unknown}</strong>{admissionState.phase === 'unknown' && <p>{C.unknownAdmission}</p>}</div>}
       {error && <div role="alert" className="notice danger">{C.serverError} <code>{error}</code>{error === 'measurements_invalid' && <p>{C.invalidMeasurements}</p>}{error === 'review_stale' && <p>{C.stale}</p>}</div>}
-      <div className="studio-layout"><aside><div className="section-label"><h2>{C.listings}</h2><button disabled={busy} onClick={() => choose(null)}>＋ {C.add}</button></div>
+      <div className="studio-layout"><aside><div className="section-label"><h2>{C.listings}</h2><button disabled={disabled} onClick={() => choose(null)}>＋ {C.add}</button></div>
         {!listings.length && <p>{COPY.listing.empty}</p>}
-        <div className="listing-list">{listings.map(l => <button key={l.id} className={`listing-card ${saved?.id === l.id ? 'selected' : ''}`} disabled={busy} onClick={() => choose(l)}>{l.garmentPhotoIds[0] && <img alt="" src={mediaUrl(l.garmentPhotoIds[0])} />}<span><strong>{l.title || C.add}</strong><small>{l.readiness.ready ? C.ready : `${C.missing}: ${l.readiness.missing.join(', ')}`}</small></span><span aria-hidden="true">↗</span></button>)}</div>
+        <div className="listing-list">{listings.map(l => <button key={l.id} className={`listing-card ${saved?.id === l.id ? 'selected' : ''}`} disabled={disabled} onClick={() => choose(l)}>{l.garmentPhotoIds[0] && <img alt="" src={mediaUrl(l.garmentPhotoIds[0])} />}<span><strong>{l.title || C.add}</strong><small>{l.readiness.ready ? C.ready : `${C.missing}: ${l.readiness.missing.join(', ')}`}</small></span><span aria-hidden="true">↗</span></button>)}</div>
         {listings.length === 100 && <small>{C.more}</small>}
         <Panel title={C.units} className="units"><span className="pill">{C.simulated}</span><dl><dt>{C.budget}</dt><dd>{units ? (units.remainingBudgetCu / 100).toFixed(2) : '—'}</dd><dt>{C.committed}</dt><dd>{units ? (units.committedCu / 100).toFixed(2) : '—'}</dd><dt>{C.balance}</dt><dd>{units?.balanceEstimateCu === null || !units ? C.notAvailable : (units.balanceEstimateCu / 100).toFixed(2)}</dd></dl><p>{COPY.units.check}</p><button disabled title={C.fixtureOnly}>{COPY.units.runCheck}</button></Panel>
       </aside><div className="workspace">
@@ -189,12 +268,14 @@ export function App() {
           <div className="measure-grid">{REQUIRED_FIELDS[declaration.category].map(field => <label key={field}>{C.fields[field]}<input inputMode="decimal" maxLength={12} placeholder={field === 'sleeve' ? C.na : unit} value={measurementText[field] ?? ''} onChange={e => { editedMeasurements.current.add(field); setMeasurementText(v => ({ ...v, [field]: e.target.value === C.na ? 'na' : e.target.value })); invalidate(); }} /></label>)}</div></fieldset>
           <div className="actions"><button className="primary" disabled={disabled} type="submit">{busy ? C.busy : C.save}</button>{dirty && <span>{C.dirty}</span>}</div>
         </form>{saved && <p className="muted">{C.readiness}: {saved.readiness.ready ? C.ready : saved.readiness.missing.join(', ')} · {C.timestamp}: <time>{saved.updatedAt}</time></p>}</Panel>
-        <Panel title={C.stepPreview}><h3>{C.selectModels}</h3><div className="model-grid">{models.map(model => <label className={`model ${selectedModels.includes(model.photoId) ? 'selected' : ''}`} key={model.photoId}><input type="checkbox" disabled={disabled || Boolean(review) || !selectedModels.includes(model.photoId) && selectedModels.length === 2} checked={selectedModels.includes(model.photoId)} onChange={e => { setSelectedModels(values => e.target.checked ? [...values, model.photoId] : values.filter(value => value !== model.photoId)); setReview(null); }} /><img src={mediaUrl(model.photoId)} alt={model.label} /><strong>{model.label}</strong><small>{C.synthetic}</small></label>)}</div><p id="admission-unavailable" className="notice">{C.admissionUnavailable}</p><button className="primary" disabled={!canGenerate} aria-describedby="admission-unavailable" onClick={() => void openCostReview()}>{C.generate}</button>
-          {!!jobs.length && <div className="jobs"><h3>{C.progress}</h3>{jobs.map(job => { const a = job.attempts.at(-1); return <article key={job.id}><div className="section-label"><strong>{C.job} <code>{job.id}</code></strong><span className={`pill ${a?.state}`}>{a?.state ?? '—'}</span></div><ol className="steps">{C.fixtureSteps.map(s => <li key={s}>{s}</li>)}</ol>{a?.error && <p role="status">{C.fixtureError} {COPY.errors[a.error.messageKey]} <code>{a.error.code}</code></p>}{a?.state === 'uncertain' && <p>{COPY.job.uncertain}</p>}{a && ACTIVE.has(a.state) && <button disabled={disabled} onClick={() => void cancelKnownJob(job.id)}>{COPY.job.cancel}</button>}</article>; })}{terminalProblem && <p className="notice">{C.retryDisabled}</p>}<button disabled={busy} onClick={() => void action(async () => { publishJobs(await jobSnapshot(jobs.map(j => j.id), saved?.id ?? null)); })}>{C.refreshJobs}</button></div>}
+        <Panel title={C.stepPreview}><h3>{C.selectModels}</h3><div className="model-grid">{models.map(model => <label className={`model ${selectedModels.includes(model.photoId) ? 'selected' : ''}`} key={model.photoId}><input type="checkbox" disabled={disabled || Boolean(review) || !selectedModels.includes(model.photoId) && selectedModels.length === 2} checked={selectedModels.includes(model.photoId)} onChange={e => { setSelectedModels(values => e.target.checked ? [...values, model.photoId] : values.filter(value => value !== model.photoId)); closeReview(); }} /><img src={mediaUrl(model.photoId)} alt={model.label} /><strong>{model.label}</strong><small>{C.synthetic}</small></label>)}</div><p id="admission-unavailable" className="notice">{C.fixtureAdmission}</p><button className="primary" disabled={!canGenerate} aria-describedby="admission-unavailable" onClick={() => void openCostReview()}>{C.generate}</button>
+          <p className="muted">{C.sessionAdmission}</p>{units && !ledgerContextKnown && <p className="notice">{C.ledgerContext}</p>}
+          {admissionState.review ? <div className="notice"><label>{C.request}<input readOnly className="mono" value={admissionState.review.requestId} onFocus={e => e.target.select()} /></label><p>{C.state}: {admissionState.phase}</p><p>{C.title}: {admissionState.review.title} · {C.original}: {admissionState.review.photoId}</p>{['unknown', 'accepted'].includes(admissionState.phase) && <button disabled={busy} onClick={reconcile}>{C.reconcile}</button>}</div> : <div><label>{C.lookupRequest}<input className="mono" value={lookupId} maxLength={36} onChange={e => { setLookupId(e.target.value); setInspected([]); }} /></label><button disabled={busy || !saved || !lookupId} onClick={lookupRequest}>{C.inspectRequest}</button>{!!inspected.length && <div><p>{C.lookupContext}</p>{inspected.map(j => <p key={j.id}><code>{j.id}</code> · {C.title}: <code>{j.listingId}</code> · {C.original}: <code>{j.garmentPhotoId}</code> · {C.modelCount}: <code>{j.modelPhotoId}</code> · {j.attempts.at(-1)?.state}</p>)}</div>}</div>}
+          {!!jobs.length && <div className="jobs"><h3>{C.progress}</h3>{jobs.map(job => { const a = job.attempts.at(-1); return <article key={job.id}><div className="section-label"><strong>{C.job} <code>{job.id}</code></strong><span className={`pill ${a?.state}`}>{a?.state ?? '—'}</span></div><ol className="steps">{C.fixtureSteps.map(s => <li key={s}>{s}</li>)}</ol>{a?.error && <p role="status">{C.fixtureError} {COPY.errors[a.error.messageKey]} <code>{a.error.code}</code></p>}{a?.state === 'uncertain' && <p>{C.fixtureJobUnknown}</p>}{a && ACTIVE.has(a.state) && <button disabled={disabled} onClick={() => void cancelKnownJob(job.id)}>{COPY.job.cancel}</button>}</article>; })}{terminalProblem && <p className="notice">{C.retryDisabled}</p>}<button disabled={busy} onClick={() => void action(async () => { publishJobs(await jobSnapshot(jobs.map(j => j.id), saved?.id ?? null)); }, true)}>{C.refreshJobs}</button></div>}
         </Panel>
         {saved && <><Panel title={C.gallery}><p>{C.originalFirst}</p><div className="gallery">{saved.garmentPhotoIds.map(id => <Image key={id} id={id} caption={COPY.listing.original} />)}{saved.tryOnResultIds.map(id => <Image key={id} id={id} caption={`${C.fixturePreview} · ${COPY.mode.fixtureImage}`} />)}</div><p className="muted">{C.recoveryDisabled}</p><h3>{C.listingText}</h3><textarea readOnly rows={8} value={fixtureListingText(saved)} aria-label={C.listingText} /><button onClick={() => { void navigator.clipboard.writeText(fixtureListingText(saved)).then(() => setCopyStatus(C.copied), () => setCopyStatus(C.copyFailed)); }}>{C.copy}</button><span role="status"> {copyStatus}</span><p className="muted">{C.copyData}</p></Panel>{saved.measurements && <Compare key={`${saved.id}:${saved.measurements.category}:${saved.measurements.enteredUnit}`} item={saved.measurements} />}</>}
       </div></div>
       <Panel title={C.units}><div className="table-scroll"><table><thead><tr><th>{C.job}</th><th>{C.attempt}</th><th>{C.state}</th><th>{C.cu}</th><th>{C.reason}</th></tr></thead><tbody>{units?.ledger.map(entry => <tr key={entry.id}><td><button disabled={busy || !saved} title={C.readKnownJob} onClick={() => void readKnownJob(entry.jobId)}><code>{entry.jobId}</code></button></td><td>{entry.attempt}</td><td>{entry.state}</td><td>{(entry.cu / 100).toFixed(2)}</td><td>{entry.reason}</td></tr>)}</tbody></table></div>{units && !units.ledger.length && <p>{C.ledgerEmpty}</p>}</Panel>
       <Panel title={C.buyer} className="buyer"><span className="pill">{C.disabled}</span><p>{COPY.buyer.disabled}</p><blockquote>{COPY.retention.vendor}</blockquote><details><summary>{C.pc1}</summary><p>{C.localNotEnabled}</p><p>{C.fixtureOnly}</p></details></Panel>
-    </main><footer>{C.brand} · {C.fixtureOnly}</footer>{review && saved && <ReviewDialog review={review} title={saved.title} onConfirm={() => void confirm()} onClose={() => setReview(null)} busy={busy} />}</>;
+    </main><footer>{C.brand} · {C.fixtureOnly}</footer>{review && saved && <ReviewDialog review={review} title={review.title} onConfirm={confirm} onClose={closeReview} busy={busy} />}</>;
 }
