@@ -9,7 +9,8 @@ export async function discloseImage(input: Uint8Array, mode: Mode, signal: Abort
   return withImageDecode(async () => {
     checkSignal(signal);
     const metadata = await sharp(bytes, DECODE_OPTIONS).metadata(); assertImageMetadata(metadata, format);
-    const { width, height } = metadata;
+    const swapped = metadata.orientation !== undefined && metadata.orientation >= 5 && metadata.orientation <= 8;
+    const width = swapped ? metadata.height : metadata.width, height = swapped ? metadata.width : metadata.height;
     if (width < 64 || height < 64 || width > 8192 || height > 8192) throw new ImageInputError('image_invalid');
     const band = Math.max(28, Math.ceil(height * .06)), font = Math.max(7, Math.floor(Math.min(width / 70, band / 3)));
     const lines = mode === 'fixture' ? ['DEMO FIXTURE · NOT A YOUCAM RESULT', 'Placeholder composite · not a try-on'] : ['AI-generated preview from YouCam · approximate', 'Fit, size, colour and details may differ.'];
