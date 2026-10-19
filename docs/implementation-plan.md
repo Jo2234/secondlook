@@ -1,6 +1,6 @@
-# SecondLook: honest AI try-on for one-of-a-kind thrift listings. Implementation plan v1.1 (SPEC R1 revision; frozen, awaiting master acceptance)
+# SecondLook: honest AI try-on for one-of-a-kind thrift listings. Implementation plan v1.2 (accepted R1 contract plus accepted R2 clarification)
 
-> v1.1 addresses master SPEC R1 items 1–8 (19 Oct 2026). The diff summary is in `docs/decisions/spec-r1-changes.md`. PC-1's disabled core is approved as a narrowing by the master; human consent is still absent.
+> v1.1 was accepted at fb61294 on 19 Oct 2026. v1.2 incorporates master-accepted R2 at ca6ea2f, documented in `docs/decisions/review-r2-clarifications.md`. Original plan author: Opus 5.5 HIGH; R2 editor/current same-thread lead: GPT-6 Astra HIGH (quota fallback, not final judging review). v1.1 addresses master SPEC R1 items 1–8 (19 Oct 2026). The diff summary is in `docs/decisions/spec-r1-changes.md`. PC-1's disabled core is approved as a narrowing by the master; human consent is still absent.
 
 - **Project key:** `youcam`. **Event:** YouCam API Skin AI & eCommerce VTO Hackathon (Perfect Corp. / Devpost).
 - **Deadline:** 2 Nov 2026 11:45 EST = **Tue 3 Nov 2026 00:45 SGT**. Internal tested checkpoint: **Sun 1 Nov 2026 12:00 SGT**.
@@ -8,7 +8,7 @@
 - **Lead:** Opus 5.5 HIGH, thread `b6726a0b-fb08-4a39-969f-5b7758e424b4` (job `control/jobs/youcam-opus.json`). Author of this plan; writes no app code or tests.
 - **Implementation:** GPT-6.1 Sol HIGH. **One slot (slot1, integrator)** is allocated initially, after master acceptance of this plan.
 - **Accepted decision (frozen):** joint-decisions §5, "thrift try-on, no skin pivot", plus Codex guardrails.
-- **Proposed correction pending master review:** PC-1 (`docs/decisions/PC-1-buyer-photo-retention.md`).
+- **Approved disabled-core privacy narrowing; enabling remains gated:** PC-1 (`docs/decisions/PC-1-buyer-photo-retention.md`).
 
 `$W` = `/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016`.
 
@@ -703,7 +703,7 @@ We do **not** attempt to judge visual faithfulness automatically and never claim
 |---|---|---|---|
 | 400 CreditInsufficiency | `no_units` | no | units |
 | 400 InvalidParameters / BadRequest / InvalidStyle* | `bad_request` | no | report bug (log the sanitized body shape) |
-| 401 | `auth` | no | key |
+| 401 / `InvalidAccessToken` | `auth` | no | key |
 | 429 | (internal backoff) → `rate_limited` | auto (≤3) / user_confirm | wait |
 | GET 400 InvalidTaskId | `task_missing` | user_confirm | retry |
 | GET 500 TaskTimeout | (backoff until deadline) → `deadline` | user_confirm | later |
@@ -713,11 +713,16 @@ We do **not** attempt to judge visual faithfulness automatically and never claim
 | `error_apply_region_mismatch` | `yc_region_mismatch` | user_confirm | category vs photo (e.g. full_body needs a full-body model) |
 | `error_multi_person` / `error_multiple_people` | `yc_multi_person` | user_confirm | one person only |
 | `exceed_max_filesize` / `error_exceed_max_image_size` / `error_below_min_image_size` | `yc_size` | no (gate bug; log) | size |
-| `error_download_image` / `error_decode_image` / `error_upload` | `yc_io` | user_confirm | retry |
+| `error_download_image` / `error_download_mask` / `error_decode_image` / `error_decode_mask` / `error_upload` | `yc_io` | user_confirm | retry |
 | `error_no_face` / `error_face_parsing` / `error_large_face_angle` / `error_no_shoulder` | `yc_face_or_shoulder` | user_confirm | face/shoulders visible, front-facing |
 | `error_nsfw_content_detected` / `exceed_nsfw_retry_limits` | `yc_declined` | no | declined |
 | `error_editing_failed` ("result too similar to source") | `yc_no_change` | user_confirm | garment too similar / choose a different photo |
-| `error_inference` / `unknown_internal_error` / `invalid_parameter` / unknown string | `yc_engine` (raw code kept) | user_confirm | generic |
+| `error_unsupport_ratio` | `yc_ratio` | user_confirm | ratio: "Use a less narrow crop before retrying." |
+| `error_inference` / `unknown_internal_error` / `invalid_parameter` | `yc_engine` (explicit entries; raw code kept) | user_confirm | generic |
+| `error_download_video` / `error_decode_video` / `error_hair_too_short` / `error_unexpected_video_duration` / `error_bald_image` | `yc_engine` (explicit general-source entries; raw code kept) | user_confirm | generic |
+| unknown string | `yc_engine` (fallback; raw code kept; does not count as documented coverage) | user_confirm | generic |
+
+R2: coverage is explicit, not necessarily non-generic. The video/hair-only entries above cover the general error source defensively; no mask, video or hair feature is added. No engine error permits an automatic task POST retry. HTTP 401 maps to auth regardless of body. Source descriptions support mask download/decode → existing I/O guidance; this is our application mapping, not a provider-defined UI code.
 
 ### 9.4 Fixture client (`fixture-client.ts`)
 
@@ -831,22 +836,22 @@ Test layers:
 | F18 | Property: any valid mm 50–2000 → cm display → re-entry round-trips within 1 mm; inches within 3.2 mm |
 | F19 | Cancel during polling → no GET after cancel (clock +1 h); state cancelled; ledger possibly_spent |
 | F20 | 600 requests through the **same limiter class used in production** (fake clock, bursts and idle gaps generated by fast-check): for every half-open window (s, s+1000 ms] the grant count is ≤3, and for every (s, s+300000 ms] it is ≤200. A waiter beyond 30 s → `limiter_timeout`; a 33rd queued waiter → immediate rejection. |
-| F21 | Every documented engine/HTTP code in the snapshot OpenAPI enum and the error tables maps to a non-generic UserError (the test parses `docs/sources/perfectcorp-ai_clothes-openapi-20261019.yaml` enums, so new docs codes would fail it). An unknown code → `yc_engine` with the raw code kept. |
+| F21 | Every documented engine/HTTP code in the frozen Clothes OpenAPI enum/response cases, Clothes reference error tables and general error-code page has an explicit mapping. Tests parse those source snapshots, assert own-entry presence and exact code/messageKey/retry policy against a test-owned expected mapping independent of the production table. Explicit §9.3 yc_engine entries are valid; unknown fallback is not coverage. Assert unknown → yc_engine with raw code retained, HTTP 401 → auth regardless of body, and no engine error automatically retries a task POST. |
 | F22 | The PUT uses exactly the method/URL/headers returned by POST /file (mock asserts Content-Type and Content-Length equality) |
 | F23 | Measurements compare panel: no network request contains buyer comparison values (RTL test spying on fetch) |
 | F24 | TTL sweep: a buyer session (enabled under a test disposition) is past 60 min → files gone from disk, media 404, the receipt lists the sha256s and the vendor statement and source URL |
-| F25 | **Crash recovery** (test-only failpoints `YOUCAM_FAILPOINT=<name>` honoured only under NODE_ENV=test; the server process is spawned and killed with SIGKILL against the contract mock): after-admission-before-upload → restart → `failed interrupted`, released, 0 POSTs; after-postSendStartedAt-before-response → `uncertain`, possibly_spent, **total POSTs across both lifetimes = 1**; after-response-before-taskId-commit → `uncertain` (taskId lost), no POST; after-taskId-commit, restarted **before** the original deadlines → GET-only resume → `succeeded`/spent with the same taskId; after-download-before-succeeded → resume completes without a new POST. In every case committed cu never decreases across the restart. |
+| F25 | **Crash recovery** (test-only failpoints `YOUCAM_FAILPOINT=<name>` honoured only under NODE_ENV=test; the server process is spawned and killed with SIGKILL against the contract mock): after-admission-before-upload → restart → `failed interrupted`, released, 0 POSTs; after-postSendStartedAt-before-response → `uncertain`, possibly_spent, **total POSTs across both lifetimes = 1**; after-response-before-taskId-commit → `uncertain` (taskId lost), no POST; after-taskId-commit, restarted **before** the original deadlines → GET-only resume → `succeeded`/spent with the same taskId; after-download-before-succeeded → resume completes without a new POST. No charged or ambiguous commitment is lost or reduced across restart. A provably unsent reservation may be released exactly once; repeated recovery is idempotent. Assert each case’s required ledger state and total and no duplicate task POST. |
 | F26 | Ownership: 20 trials of two starters spawned concurrently on one DATA_DIR → exactly one acquires and the other exits 3. A lock left by a SIGKILLed pid, an empty lock and a garbage lock → the starter **still exits 3** (no takeover, lock bytes unchanged). Clean shutdown removes the lock only when its lockId matches. A test that replaces the lock with a foreign lockId before shutdown → the foreign lock is left intact. |
 | F27 | Idempotency: the same `requestId` and body sent twice concurrently (`Promise.all`) → one set of jobs, one set of ledger entries, both responses identical. The same id with a different modelPhotoIds → 409 `request_id_conflict`, nothing written. |
 | F28 | Whole-batch admission: N=2 with room for only 1 → 409 `budget_exceeded`, **zero** jobs and ledger entries written (state.json byte-identical before and after). |
-| F29 | Balance estimate: preflight balance 10.00 units at T; entries totalling 8.00 units created after T (any of reserved/spent/possibly_spent); a request needing 4.00 → 409 `insufficient_balance_estimate`. Entries created before T are not double-subtracted. |
+| F29 | Balance estimate: preflight balance 10.00 units at T; entries totalling 8.00 units created after T (any of reserved/spent/possibly_spent); a request needing 4.00 → 409 `insufficient_balance_estimate`. All unresolved reserved/possibly_spent entries are deducted regardless of creation time. Only spent entries settled at or before fenceSeq are not deducted again. The one-task safety margin and F37 observation fence still apply. |
 | F30 | SKU binding: `run_task_url` values `https://evil.example/s2s/v2.0/task/cloth-v4`, `https://yce-api-01.makeupar.com.evil.com/s2s/v2.0/task/cloth-v4`, `http://yce-api-01.makeupar.com/s2s/v2.0/task/cloth-v4`, `…/cloth-v4/`, `…/cloth-v4?x=1`, `…/cloth-v3` → no match (`cost_unknown`). Two exact matches → `cost_ambiguous`. `amount` ∈ {NaN, −1, 1.234, "2", 1e9, Infinity} → `cost_invalid`. `unit: "second"` → `cost_invalid`. A transport spy proves **no request is ever made to any `run_task_url`**. |
 | F31 | Destination policy: PUT/download URL on a non-allowlisted host, IP literal, userinfo, port 8443 or trailing dot → `policy` refusal with zero sockets opened. Any 301/302/307 from API or media → `redirect_refused`. The policy lookup returning `10.0.0.5`, `169.254.169.254`, `100.64.0.1`, `::1`, `fd00::1` or `::ffff:127.0.0.1` → refused. Authorization is never present on media-host requests (mock asserts). |
 | F32 | Bounded reads: a 2 MiB JSON response → `too_large` and the socket destroyed; a 25 MiB result → `too_large`; feature-cost returning the same `next_token` repeatedly, or 11 pages → `cost_ambiguous` after ≤10 GETs. |
 | F33 | Decode bounds: a 20,000×20,000 PNG (small file) → `image_too_large` before a full decode (RSS increase < 200 MB, measured); an animated PNG / multi-page image → `image_unsupported`; an SVG renamed .jpg → format fail. |
 | F34 | Deadlines and cancellation (fake clock): a hanging upload → terminal by `attemptDeadlineAt` + 1 s; a hanging preflight → error within 60 s; batch N=2 whose first attempt uses the whole budget → the second fails `batch_deadline` and is released. Cancel during (a) limiter wait, (b) backoff sleep, (c) in-flight GET → no further requests, `tmp/<attemptId>` removed, `vi.getTimerCount() === 0`, the limiter queue is empty. |
 | F35 | POST transport failures of every class (ENOTFOUND, ECONNREFUSED, ECONNRESET, TLS error, socket timeout, abort after `postSendStartedAt`) → `uncertain`, postCount 1, no automatic POST. A POST 500/502/503 → `uncertain`. Cancel **before** `postSendStartedAt` is committed → `cancelled`, postCount 0, released. |
-| F36 | Retention wording: `COPY.retention.vendor` equals the frozen text in §13 (sha256 asserted). No other copy, README or doc string contains "30 days" or "30-day" except verbatim quotations of `COPY.retention.vendor`. The F14 patterns additionally ban `\b(guarantee[sd]?|always|permanently|completely)\b.{0,40}\b(delet|remov|eras)` and `\bimmediately (deleted|removed|erased)\b`. |
+| F36 | Retention wording: `COPY.retention.vendor` equals the frozen text in §13 (sha256 asserted). Scan COPY values, user-visible UI text, deterministic listing output, README, submission draft and demo script: no "30 days" or "30-day" except the verbatim vendor statement, always paired with the local deletion statement. Preserve source snapshots and historical plan/decision/review evidence; they are not product copy. Mutation cases must show every implemented product document is scanned. Unimplemented final artifacts are reported pending, so a partial copy/README scan is not final F36 completion. The F14 patterns additionally ban `\b(guarantee[sd]?|always|permanently|completely)\b.{0,40}\b(delet|remov|eras)` and `\bimmediately (deleted|removed|erased)\b`. |
 | F37 | Balance fence: `reserved`/`possibly_spent` entries created **before** a refreshed preflight are still deducted. `spent` entries settled after `fenceSeq` are deducted; those settled at or before it are not. A preflight while an attempt is non-terminal → `preflight_busy` with zero requests. An admission during an in-progress preflight → 409 `preflight_in_progress`. An estimate that covers need but not need + one-task margin → `insufficient_balance_estimate`. |
 | F38 | Recovery after deadline: crash while polling, restart after `attemptDeadlineAt` (or `batchDeadlineAt`) → `timed_out`/`possibly_spent` and the mock records **zero** requests after restart. Restart before the deadline → only GET/download requests, the last one sent before the original deadline, and none after. |
 | F39 | Missing artifact: delete the result file of a `succeeded` attempt and restart → the state is still `succeeded`, the ledger is `spent`, zero requests at startup. An explicit artifact recovery → ≤1 GET + ≤1 download, attempt state and ledger byte-identical. Past 24 h → 409 `artifact_recovery_expired`, zero requests. A 4th recovery → 409 `artifact_recovery_limit`. Two concurrent recoveries → the second 409 `artifact_recovery_busy`. |
@@ -943,7 +948,7 @@ Footage is labelled on-screen: "DEMO (fixture)" or "LIVE YouCam". The live segme
 | 0:45–1:00 | Measurements in cm, toggle to inches | "Measurements, not size claims." |
 | 1:00–1:45 | Pick a consented model (Johan) → cost dialog with live feature-cost and balance → progress (uploading → sent → generating, polling → downloading) → result with the burned disclosure | "This is YouCam's AI Clothes try-on v4: File API upload, an async task, and polling with a deadline and safe retries." |
 | 1:45–2:15 | Listing page: original first, the try-on labelled approximate; the compare-with-your-garment differences | "The original always comes first; the AI preview is labelled approximate." |
-| 2:15–2:35 | Buyer "Try it on yourself": the disabled explainer (or, if PC-1 is enabled for Johan, consent → result → deletion receipt with the vendor-retention line) | "We tell you exactly what we delete, and what YouCam keeps for 30 days." |
+| 2:15–2:35 | Buyer "Try it on yourself": the disabled explainer (or, if PC-1 is enabled for Johan, consent → result → deletion receipt with the vendor-retention line) | "We distinguish our own deletion from the AI provider’s documented retention policy." Display the complete frozen vendor statement. |
 | 2:35–3:00 | Units ledger + architecture card (cloth-v4, File API, feature-cost, credit) | Recap of the YouCam APIs used. Fixture vs live labels. |
 
 No brand logos, copyrighted music or third-party people appear in the footage (R8).

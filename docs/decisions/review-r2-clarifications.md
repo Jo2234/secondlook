@@ -1,6 +1,6 @@
 # Review clarification R2 — source and acceptance consistency
 
-Author: GPT-6 Astra HIGH, same YouCam lead, 19 October 2026. Quota fallback from Opus 5.5 HIGH; this is not final judging review. Original plan v1.1 at fb61294 remains Opus-authored. Status: proposed to master; application changes await disposition.
+Author: GPT-6 Astra HIGH, same YouCam lead, 19 October 2026. Quota fallback from Opus 5.5 HIGH; this is not final judging review. Original plan v1.1 at fb61294 remains Opus-authored. Status: ACCEPTED by master at ca6ea2f; disposition `control/plans/youcam/master-r2-clarification-disposition-20261019.json`. Normative plan v1.2 carries these corrections; original Sol slot1 implements. This approval does not grant installation or heavy execution.
 
 ## F21: explicit coverage, including deliberately generic guidance
 
