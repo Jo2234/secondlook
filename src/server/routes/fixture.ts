@@ -29,6 +29,27 @@ export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void 
   const listingResponse = (listing: Listing) => {
     const state = store.snapshot(); return { ...listing, readiness: readiness(listing, Object.fromEntries(state.qualities.map(q => [q.photoId, q])), new Set(state.images.map(i => i.id))), mode: env.mode };
   };
+  // Register before the sweeping middleware: resolving an admission is a read-only operation.
+  app.get('/api/tryon-requests/:requestId', c => {
+    if (env.mode !== 'fixture') throw new RouteError('live_execution_not_ready', 503);
+    const parsed = TryOnRequestSchema.shape.requestId.safeParse(c.req.param('requestId'));
+    if (!parsed.success) throw new RouteError('invalid_request', 400);
+    // A failed/unknown commit must never expose the previous memory snapshot as settled truth.
+    store.assertWritable();
+    const state = store.snapshot(), requests = state.requests.filter(request => request.requestId === parsed.data);
+    const related = state.jobs.filter(job => job.requestId === parsed.data);
+    if (!requests.length && !related.length) throw new RouteError('not_found', 404);
+    const request = requests[0];
+    if (requests.length !== 1 || !request || request.jobIds.length < 1 || request.jobIds.length > 2
+      || new Set(request.jobIds).size !== request.jobIds.length || related.length !== request.jobIds.length) throw new RouteError('admission_record_inconsistent', 503);
+    const jobs = request.jobIds.map(jobId => {
+      const matches = state.jobs.filter(job => job.id === jobId), job = matches[0];
+      if (matches.length !== 1 || !job || job.requestId !== parsed.data || job.mode !== env.mode) throw new RouteError('admission_record_inconsistent', 503);
+      return job;
+    });
+    // Unknown UUID 404 is not proof that an original POST did not commit, nor permission to retry it.
+    return c.json({ mode: env.mode, jobs });
+  });
   app.use('/api/*', async (c, next) => {
     if (services.signal.aborted && !['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) throw new RouteError('runner_closed', 503);
     await sweepExpired(store, Date.now()); await next();
