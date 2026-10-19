@@ -1,17 +1,17 @@
 {
   "schema": "youcam-one-file-heavy-proposal/1",
-  "status": "PROPOSED_NOT_AUTHORIZED_NOT_EXECUTED",
+  "status": "DRAFT_UNRUN_REQUIRES_POSTCOMMIT_BINDING_AND_PARENT_REVIEW",
   "project": "youcam",
-  "candidate": "8c6b909ed09c70c0e5cf0fa2bfb3a53030c1d8e6",
+  "candidate": null,
   "base": "936770da4d4c155418b327d3829e901b9638d880",
-  "branch": "codex/youcam-s2-fixture-source-20261019-r1",
+  "branch": "codex/youcam-runner-r1-r3-source-20261019-r8",
   "cwd": "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/projects/youcam-wt/slot1",
   "namespace": "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/projects/youcam-wt/slot1/test-results/youcam-fixture-api-heavy-20261019-r1",
-  "requestedGrantId": "heavy-youcam-fixture-api-onefile-slot1-20261019-new-r1",
+  "requestedGrantId": "heavy-youcam-fixture-api-onefile-slot1-20261019-runner-r8",
   "sourcePinsPath": "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/projects/youcam-wt/slot1/docs/reports/s2-source-20261019/source-pins.json",
-  "sourcePinsSha256": "894b238835cd947483015422654e0372952d95ddd658e1f7887a0b1d95aefa56",
-  "runnerSha256": "88858964c84e50441aec6b22194ce18e82569f2d50e7436c0d9a7af161d08f32",
-  "callerSha256": "ccf49ddcfaa66f7321d6a0353a2bb03966f0eb8130cbfcbde419a3ef76236b5e",
+  "sourcePinsSha256": "e2091c76893d9b58657b5071347ab5b07c4d3cd07c3d3247d4896155bd78c1ee",
+  "runnerSha256": "87f9a96136375f50b0cc7eea4b0123cfcbb2d2aece4363093130bc260559345f",
+  "callerSha256": "779c3214b1ee7777727a1f2a1a62fc5c9645b3f69a9cc45184861f178cec9852",
   "stageSequence": [
     {
       "name": "fixture-api",
@@ -59,7 +59,10 @@
     "rootDeadlineSeconds": 30,
     "combinedOutputBytes": 2097152,
     "rootTermSeconds": 2,
-    "rootKillReapSeconds": 2
+    "rootKillReapSeconds": 2,
+    "preparationSeconds": 15,
+    "supervisorEnvelopeSeconds": 50,
+    "launchReserveSeconds": 35
   },
   "allowedWrites": {
     "runnerFiles": [
@@ -97,15 +100,21 @@
     "use": "Historical exact runtime and installed byte pins only, not any old grant or authority. <=1467 installed bodies + two Python runtime files + Node, each<=128MiB, combined<=256MiB, one prelaunch pass after fresh grant; no discovery/expansion."
   },
   "caller": {
-    "execution": "Import scripts/grant-caller.mjs in an existing resident Node caller; call captureGranted with exact outer argv/cwd/env/callerNamespace. No extra wrapper process. Caller must never precreate runner namespace or its must-absent files.",
+    "execution": "Import scripts/grant-caller.mjs in an existing resident Node caller; call captureGranted with exact argv/cwd/env/callerNamespace/candidate/stageName from the postcommit caller input. No extra wrapper or precreation of runner namespace/files. This draft is UNRUN and no execution request.",
     "namespace": "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/projects/youcam-wt/slot1/test-results/youcam-fixture-api-caller-20261019-r1",
-    "decisionMs": 60000,
+    "decisionMs": 55000,
     "rootCleanupMs": 5000,
     "combinedOutputBytes": 2097152,
-    "writeRule": "Bounded memory capture; O_EXCL writes into separate caller namespace only after actual caller root exit/reap plus EOF/stdio closed. No old output role reuse.",
-    "prelaunchSelection": "Fresh actual reservation read is required immediately before spawn; exact unique grant/recipient/cwd/argv/env must match. No historical grant is accepted as authority."
+    "writeRule": "Bounded memory capture. Separate wx evidence only after actual supervisor reap, both stream EOF and close, explicit target closure and no unknown. Per-stream errors do not supply EOF/close.",
+    "prelaunchSelection": "Fresh actual reservation read is required immediately before spawn; exact unique grant/recipient/cwd/argv/env must match. No historical grant is accepted as authority.",
+    "outerEnvelopeMs": 60000,
+    "cooperativeTargetCleanupMs": 4000,
+    "finalClosureMs": 1000,
+    "targetClosure": "Require explicit final retainedTargetClosure for exact candidate/stage with actual target reap, both streams closed and sticky unknown false; Python exit is insufficient."
   },
   "prelaunchRequirement": "Parent must independently review source/runner/caller/proposal, issue unique exact grant, freshly read actual heavy holder and confirm this exact grant/child/argv/cwd/env before launch. This proposal is no authority. No self-grant or old grant reuse.",
-  "qualification": "One Node target root, one Vitest thread worker, no fork test workers; no descendant/global absence or loaded-image/native provenance/OS sandbox proof. No tsc, old 68 tests, normalize/calibration/synth rerun, generator, build, PM, install, listener, browser, live network, person image or unit spend. F33 itself uses the actual native adapter under this proposed future grant.",
-  "futureParentGrantFile": "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/control/resume-remaining-20261019/youcam-fixture-api-onefile-source-r1-grant.json"
+  "qualification": "One Node target root, one Vitest thread worker, no fork test workers; no descendant/global absence or loaded-image/native provenance/OS sandbox proof. No tsc, old 68 tests, normalize/calibration/synth rerun, generator, build, PM, install, listener, browser, live network, person image or unit spend. Targets remain UNRUN and these drafts request no execution. Native adapter use would require a future reviewed exact grant.",
+  "futureParentGrantFile": "/Users/johanvaz/Documents/Codex/2026-10-04/i-w/outputs/t3code-data/scratch/hackathon-workflow-20261016/control/resume-remaining-20261019/youcam-fixture-api-onefile-runner-r8-grant.json",
+  "sourceCommit": null,
+  "candidateBinding": "Use exact ignored postcommit packet with actual final clean HEAD; this tracked template is not an executable proposal."
 }

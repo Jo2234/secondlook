@@ -1,6 +1,6 @@
 {
   "schema": "youcam-s2-source-pins/1",
-  "candidate": "8c6b909ed09c70c0e5cf0fa2bfb3a53030c1d8e6",
+  "candidate": null,
   "testedPureCandidate": "7da22615967ecab6216284d0b4574dc5cd3744d7",
   "base": "936770da4d4c155418b327d3829e901b9638d880",
   "files": {
@@ -213,12 +213,12 @@
       "bytes": 123
     },
     "scripts/grant-caller.mjs": {
-      "sha256": "ccf49ddcfaa66f7321d6a0353a2bb03966f0eb8130cbfcbde419a3ef76236b5e",
-      "bytes": 3242
+      "sha256": "779c3214b1ee7777727a1f2a1a62fc5c9645b3f69a9cc45184861f178cec9852",
+      "bytes": 7943
     },
     "scripts/grant-one-root.py": {
-      "sha256": "88858964c84e50441aec6b22194ce18e82569f2d50e7436c0d9a7af161d08f32",
-      "bytes": 12596
+      "sha256": "87f9a96136375f50b0cc7eea4b0123cfcbb2d2aece4363093130bc260559345f",
+      "bytes": 16510
     },
     "scripts/licenses.mjs": {
       "sha256": "066b5257944e7376abe8d924241966178726645160fbcd37542bd9ad9e3c590b",
@@ -528,5 +528,18 @@
       "sha256": "fea76f5fcf43bf3aa5405443171ebc931f0ac120b8aa563a497d495c68f107d1",
       "bytes": 245
     }
+  },
+  "sourceCommit": null,
+  "status": "DRAFT_UNRUN_REQUIRES_POSTCOMMIT_BINDING_AND_PARENT_REVIEW",
+  "binding": "Exact clean final commit and complete tracked input map live in the ignored postcommit prospective packet; this template is ineligible for execution.",
+  "artifactMetadata": {
+    "inheritedWithoutBodyReadOrHash": [
+      "assets/demo/dress.png",
+      "assets/demo/jacket.png",
+      "assets/demo/model-front.png",
+      "assets/demo/tee.png",
+      "assets/demo/trousers.png"
+    ],
+    "historicalSourceMapSha256": "894b238835cd947483015422654e0372952d95ddd658e1f7887a0b1d95aefa56"
   }
 }

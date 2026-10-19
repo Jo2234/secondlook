@@ -1,0 +1,15 @@
+{
+  "language": "Python",
+  "status": "DRAFT_UNRUN_NO_GRANT_OR_EXECUTION_REQUEST",
+  "scope": "One prospective injected supervisor boundary draft; no actual Popen, native import, filesystem integration or OS probe in an eventual harness. Harness source is not implemented or executed here.",
+  "cases": [
+    "Preparation at or beyond 15 seconds, stop requested, or remaining local envelope below 35 seconds: target Popen is never reached. Target retains 30 seconds plus 2+2 cleanup; local supervisor envelope is 50 seconds inside caller total 60.",
+    "TERM immediately before, during or after Popen: handler only sets a sticky flag; a returned handle and actual wait are retained before fallible bookkeeping; cooperative cleanup reaches the exact direct root.",
+    "Clock raises or returns a nonfinite value on cleanup entry or either timeout sample: original cleanup end is never refreshed; actual early and final captured waits are independently attempted with zero timeout when necessary.",
+    "Poll/TERM/early-wait/KILL/selector/pipe/log-close errors independently and in combination: final actual captured wait is attempted; every resource close is attempted; unknown remains sticky even after a later successful wait.",
+    "Captured final wait times out at zero: rootReaped remains false; no target closure acknowledgement claims certainty. Successful actual wait may record reap, but cannot erase prior unknown.",
+    "Read failure on one pipe, ordinary EOF on the other, successful close of both: EOF, streamClosed and per-stream errors remain independent and accurately labelled.",
+    "Reaped or mismatched direct handle: no signal or pid adoption; no process group/descendant/global signalling or absence claim."
+  ],
+  "futureValidation": "Parent source review first. Any injected harness would need a separate finite exact source-pinned proposal. No execution proposed by this draft."
+}

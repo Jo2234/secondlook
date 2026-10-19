@@ -1,0 +1,15 @@
+{
+  "language": "JavaScript",
+  "status": "DRAFT_UNRUN_NO_GRANT_OR_EXECUTION_REQUEST",
+  "scope": "One prospective injected caller boundary draft; no product/native/server imports and no actual child spawn in an eventual harness. Harness source is not implemented or executed here.",
+  "cases": [
+    "Either pipe errors before data/end: handler consumes error, sticky unknown, cooperative TERM only on original direct supervisor handle, independent exit/ChildProcess-close/stdout-close/stderr-close attempts, no synthetic EOF or disk evidence.",
+    "stdout and stderr interleave data/end/close/error: each label remains distinct; close alone never supplies EOF; stream error never supplies close.",
+    "Early output cap or root error: one cleanup path, four seconds for supervisor retained-target cleanup before direct supervisor KILL; final waits still attempted after signal failure.",
+    "Exit or PID mismatch before signal: no adopted, replaced or already reaped handle is signalled; false/throwing kill remains sticky unknown.",
+    "Normal supervisor close but missing/mismatched/unknown target acknowledgement: no inferred target closure and no caller namespace creation.",
+    "55-second work cutoff, 60-second original total envelope; cleanup never refreshes the original deadline and uses no interval. Expired envelope still attempts every final wait and retains unknown.",
+    "Clock error after actual closure: receipt elapsed is unknown, failure remains sticky; cleanup waits were already attempted and no disk writes follow."
+  ],
+  "futureValidation": "Parent source review first. Any injected harness would need a separate finite exact source-pinned proposal. No execution proposed by this draft."
+}
