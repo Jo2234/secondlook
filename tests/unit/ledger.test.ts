@@ -37,3 +37,24 @@ test('settlement permanently retains possibly-spent commitments and releases onl
   expect(settle(reserved, { success: false, postStarted: true, definitiveNonAccepting: true }, now, 11).state).toBe('released');
   expect(settle(reserved, { success: true, postStarted: true, definitiveNonAccepting: false }, now, 11).state).toBe('spent');
 });
+
+test('F29 refreshed observation deducts old unresolved commitments and rejects need4 from observed10 minus8', () => {
+  const unresolved = [{ ...entry('reserved', 400, 1), createdSeq: 1 }, { ...entry('possibly_spent', 400, 2), createdSeq: 2 }];
+  expect(balanceEstimateCu({ balanceCu: 1000, fenceSeq: 10 }, unresolved)).toBe(200);
+  const request = { ...input(), budgetCu: 10000, state: { ...empty, entries: unresolved }, preflight: { ...preflight, balanceCu: 1000 } };
+  expect(admit(request)).toEqual({ ok: false, error: 'insufficient_balance_estimate' });
+});
+test('F25 pure settlement releases a proved-unsent reservation once and preserves charged or ambiguous totals on replay', () => {
+  const reserved = entry('reserved', 400, 1);
+  const unsent = settle(reserved, { success: false, postStarted: false, definitiveNonAccepting: false }, now, 11);
+  expect(unsent.state).toBe('released'); expect(committedCu([unsent])).toBe(0);
+  expect(settle(unsent, { success: false, postStarted: false, definitiveNonAccepting: false }, now, 12)).toBe(unsent);
+  for (const success of [false, true]) {
+    const settled = settle(reserved, { success, postStarted: true, definitiveNonAccepting: false }, now, 11);
+    const replayed = JSON.parse(JSON.stringify(settled)) as LedgerEntry;
+    expect(committedCu([replayed])).toBe(400);
+    expect(settle(replayed, { success: false, postStarted: false, definitiveNonAccepting: true }, now, 12)).toBe(replayed);
+    expect(committedCu([replayed])).toBe(400);
+  }
+  // Spawn/SIGKILL/store replay F25 cases remain pending the S2 store and an integration grant.
+});

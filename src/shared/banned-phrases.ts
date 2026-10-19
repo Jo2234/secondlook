@@ -17,3 +17,12 @@ export function findBannedPhrases(text: string, allowed: readonly string[] = [])
 export function findRetentionMentions(text: string, vendorQuote: string): string[] {
   return [...text.split(vendorQuote).join('').matchAll(/\b30(?: days|-day)\b/gi)].map(m => m[0]);
 }
+
+export interface ProductCopySource { id: string; text: string }
+export function scanProductCopy(sources: readonly ProductCopySource[], retention: { local: string; vendor: string }): { source: string; issues: string[] }[] {
+  return sources.flatMap(({ id, text }) => {
+    const issues = [...findBannedPhrases(text, [retention.vendor]), ...findRetentionMentions(text, retention.vendor)];
+    if (text.includes(retention.local) !== text.includes(retention.vendor)) issues.push('retention_statements_must_be_paired');
+    return issues.length ? [{ source: id, issues }] : [];
+  });
+}

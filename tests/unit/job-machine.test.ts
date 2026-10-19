@@ -50,3 +50,78 @@ test('I5 retry requires fresh confirmation request and ledger identity', () => {
   expect(retryAttempt(failed, input)).toMatchObject({ n: 2, state: 'queued', ledgerEntryId: 'entry2', taskId: null, postCount: 0 });
   expect(() => retryAttempt(failed, { ...input, ledgerEntryId: 'entry1' })).toThrow('retry_not_admitted');
 });
+
+function pollingAttempt(): TryOnAttempt { return step(submitted(), { type: 'task_created', taskId: 'task' }, time(1)).attempt; }
+function expiredResult(): TryOnAttempt {
+  let a = pollingAttempt();
+  for (const event of [{ type: 'poll_due' }, { type: 'limiter_granted', request: 'task_get' }, { type: 'poll_success', url: 'https://media/result' }, { type: 'limiter_granted', request: 'download' }, { type: 'download_failed', expired: true }] as const) a = step(a, event, time(6000)).attempt;
+  return a;
+}
+test('GET limiter failures share the consecutive retry/backoff cap without counting an unsent HTTP GET', () => {
+  let a = pollingAttempt(), clock = 5001;
+  const expectedBackoffs = [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000];
+  for (let i = 0; i <= 8; i++) {
+    a = step(a, { type: 'poll_due' }, time(clock)).attempt;
+    const result = step(a, { type: 'limiter_failed' }, time(clock), { jitterFactor: .8 });
+    expect(result.attempt.getCount).toBe(0);
+    expect(result.attempt.history.filter(h => h.reason === 'get_error')).toHaveLength(i + 1);
+    expect(result.effects.filter(e => e.type === 'request')).toEqual([]);
+    if (i < 8) {
+      expect(result.effects).toEqual([{ type: 'wait', until: Date.parse(time(clock)) + expectedBackoffs[i]! * .8 }]);
+      clock += expectedBackoffs[i]! * .8;
+    } else {
+      expect(result.attempt).toMatchObject({ state: 'failed', taskId: 'task', error: { code: 'get_retries_exhausted' } });
+      expect(result.effects).toContainEqual({ type: 'settle', state: 'possibly_spent' });
+      expect(step(result.attempt, { type: 'poll_due' }, time(clock + 3600000)).effects).toEqual([]);
+    }
+    a = result.attempt;
+  }
+});
+test('a successful running GET resets the shared consecutive error allowance', () => {
+  let a = pollingAttempt();
+  a = step(a, { type: 'poll_due' }, time(5001)).attempt;
+  a = step(a, { type: 'limiter_failed' }, time(5001)).attempt;
+  a = step(a, { type: 'poll_due' }, time(6001)).attempt;
+  a = step(a, { type: 'limiter_granted', request: 'task_get' }, time(6001)).attempt;
+  a = step(a, { type: 'get_error' }, time(6001)).attempt;
+  a = step(a, { type: 'poll_due' }, time(8001)).attempt;
+  a = step(a, { type: 'limiter_granted', request: 'task_get' }, time(8001)).attempt;
+  a = step(a, { type: 'poll_running' }, time(8001)).attempt;
+  a = step(a, { type: 'poll_due' }, time(13001)).attempt;
+  const result = step(a, { type: 'limiter_failed' }, time(13001));
+  expect(result.attempt.getCount).toBe(2); expect(result.effects).toEqual([{ type: 'wait', until: Date.parse(time(14001)) }]);
+});
+test('refresh running, engine error and transport failure terminate without another GET', () => {
+  for (const event of [{ type: 'poll_running' }, { type: 'poll_error', code: 'error_pose' }, { type: 'get_error' }] as const) {
+    let a = expiredResult();
+    a = step(a, { type: 'limiter_granted', request: 'task_get' }, time(6001)).attempt;
+    const result = step(a, event, time(6002));
+    expect(result.attempt).toMatchObject({ state: 'failed', taskId: 'task', getCount: 2, error: { code: 'result_download_failed' } });
+    expect(result.effects).toEqual([{ type: 'abort_cleanup' }, { type: 'settle', state: 'possibly_spent' }]);
+    for (const next of [{ type: 'poll_due' }, { type: 'limiter_granted', request: 'task_get' }] as const) expect(step(result.attempt, next, time(3600000)).effects).toEqual([]);
+  }
+});
+test('refresh limiter failure sends zero refresh GETs and cannot re-enter polling', () => {
+  const result = step(expiredResult(), { type: 'limiter_failed' }, time(6001));
+  expect(result.attempt).toMatchObject({ state: 'failed', getCount: 1, taskId: 'task', error: { code: 'result_download_failed' } });
+  expect(result.effects).toEqual([{ type: 'abort_cleanup' }, { type: 'settle', state: 'possibly_spent' }]);
+  expect(step(result.attempt, { type: 'poll_due' }, time(3600000)).effects).toEqual([]);
+});
+test('successful refresh permits one new download; second expiry never requests a second refresh', () => {
+  let a = expiredResult();
+  for (const event of [{ type: 'limiter_granted', request: 'task_get' }, { type: 'poll_success', url: 'https://media/fresh' }, { type: 'limiter_granted', request: 'download' }] as const) a = step(a, event, time(6001)).attempt;
+  expect(step(a, { type: 'downloaded' }, time(6002)).attempt.state).toBe('succeeded');
+  const failed = step(a, { type: 'download_failed', expired: true }, time(6002));
+  expect(failed.attempt).toMatchObject({ state: 'failed', getCount: 2, taskId: 'task', error: { code: 'result_download_failed' } });
+  expect(failed.effects.filter(e => e.type === 'request' || e.type === 'request_grant')).toEqual([]);
+});
+test('refresh preserves original attempt, batch and download deadlines and cancellation', () => {
+  const a = expiredResult();
+  for (const [at, options] of [[a.attemptDeadlineAt!, {}], [time(6002), { batchDeadlineAt: time(6002) }], [time(66000), {}]] as const) {
+    const result = step(a, { type: 'limiter_granted', request: 'task_get' }, at, options);
+    expect(result.effects.filter(e => e.type === 'request' || e.type === 'request_grant' || e.type === 'wait')).toEqual([]);
+    expect(['failed', 'timed_out']).toContain(result.attempt.state);
+    expect(result.effects).toContainEqual({ type: 'settle', state: 'possibly_spent' });
+  }
+  expect(step(a, { type: 'cancel' }, time(6002))).toMatchObject({ attempt: { state: 'cancelled' }, effects: [{ type: 'abort_cleanup' }, { type: 'settle', state: 'possibly_spent' }] });
+});

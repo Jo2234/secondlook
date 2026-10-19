@@ -48,6 +48,18 @@ export function step(previous: TryOnAttempt, event: Event, now: IsoTime, options
   const grant = (request: RequestKind, notBefore = time): void => { record(`grant:${request}:${notBefore}`); effects.push({ type: 'request_grant', request, notBefore }); };
   const finish = (kind: RequestKind): void => record(`response:${kind}`);
   const wait = (until: number): void => { record(`wait:${until}`); effects.push({ type: 'wait', until }); };
+  const refreshing = a.history.some(h => h.reason === 'result_refresh');
+  const failDownload = (): void => settle('failed', localError('result_download_failed', 'download'));
+  const getFailure = (): void => {
+    finish('task_get');
+    if (refreshing) { failDownload(); return; }
+    record('get_error');
+    const sinceRunning = a.history.slice(a.history.map(h => h.reason).lastIndexOf('poll_running') + 1).filter(h => h.reason === 'get_error').length;
+    if (sinceRunning > MAX_GET_RETRIES) { settle('failed', localError('get_retries_exhausted')); return; }
+    const factor = options.jitterFactor ?? 1;
+    if (!Number.isFinite(factor) || factor < .8 || factor > 1.2) throw new Error('invalid_jitter');
+    wait(time + GET_BACKOFF_MS[Math.min(sinceRunning - 1, GET_BACKOFF_MS.length - 1)]! * factor);
+  };
   const attemptExpired = a.attemptDeadlineAt !== null && time >= Date.parse(a.attemptDeadlineAt) || options.batchDeadlineAt !== undefined && time >= Date.parse(options.batchDeadlineAt);
   if (attemptExpired || event.type === 'attempt_deadline') {
     settle(a.state === 'submitting' ? ambiguousSend() ? 'uncertain' : 'failed' : a.state === 'queued' || a.state === 'uploading' ? 'failed' : 'timed_out', localError('deadline', 'later')); return done();
@@ -70,9 +82,9 @@ export function step(previous: TryOnAttempt, event: Event, now: IsoTime, options
     record(`request:${event.request}`); effects.push({ type: 'request', request: event.request }); return done();
   }
   if (event.type === 'limiter_failed' && active?.phase === 'grant') {
-    finish(active.kind);
+    if (active.kind !== 'task_get') finish(active.kind);
     if (active.kind === 'task_post') settle('failed', localError('limiter_timeout'), true);
-    else if (active.kind === 'task_get') wait(time + 1000);
+    else if (active.kind === 'task_get') getFailure();
     else settle('failed', localError('limiter_timeout'));
     return done();
   }
@@ -90,23 +102,17 @@ export function step(previous: TryOnAttempt, event: Event, now: IsoTime, options
     }
     if (['post_transport_error', 'post_timeout', 'post_parse_error'].includes(event.type)) { finish('task_post'); settle('uncertain', localError('uncertain_charge')); return done(); }
   }
-  if (event.type === 'poll_due' && a.state === 'polling' && !active && a.taskId) {
+  if (event.type === 'poll_due' && a.state === 'polling' && !active && a.taskId && !refreshing) {
     const lastWait = [...a.history].reverse().find(h => h.reason.startsWith('wait:'));
     if (!lastWait || time >= Number(lastWait.reason.slice(5))) grant('task_get');
     return done();
   }
   if (a.state === 'polling' && active?.phase === 'request' && active.kind === 'task_get') {
-    if (event.type === 'poll_running') { finish('task_get'); record('poll_running'); wait(time + (time - Date.parse(a.submittedAt!) < POLL_FAST_UNTIL_MS ? POLL_FAST_MS : POLL_SLOW_MS)); return done(); }
+    if (event.type === 'poll_running') { finish('task_get'); if (refreshing) { failDownload(); return done(); } record('poll_running'); wait(time + (time - Date.parse(a.submittedAt!) < POLL_FAST_UNTIL_MS ? POLL_FAST_MS : POLL_SLOW_MS)); return done(); }
     if (event.type === 'poll_success' && event.url) { finish('task_get'); record('poll_success', 'downloading'); grant('download'); return done(); }
-    if (event.type === 'poll_error') { finish('task_get'); settle('failed', mapError({ engineError: event.code })); return done(); }
-    if (event.type === 'get_error') {
-      finish('task_get'); record('get_error');
-      const sinceRunning = a.history.slice(a.history.map(h => h.reason).lastIndexOf('poll_running') + 1).filter(h => h.reason === 'get_error').length;
-      if (sinceRunning > MAX_GET_RETRIES) { settle('failed', localError('get_retries_exhausted')); return done(); }
-      const factor = options.jitterFactor ?? 1;
-      if (factor < .8 || factor > 1.2) throw new Error('invalid_jitter');
-      wait(time + GET_BACKOFF_MS[Math.min(sinceRunning - 1, GET_BACKOFF_MS.length - 1)]! * factor); return done();
-    }
+    if (event.type === 'poll_error') { finish('task_get'); if (refreshing) failDownload(); else settle('failed', mapError({ engineError: event.code })); return done(); }
+    if (event.type === 'get_error') { getFailure(); return done(); }
+    if (event.type === 'poll_success' && refreshing) { finish('task_get'); failDownload(); return done(); }
   }
   if (a.state === 'downloading' && active?.phase === 'request' && active.kind === 'download') {
     if (event.type === 'downloaded') { finish('download'); settle('succeeded', null); return done(); }

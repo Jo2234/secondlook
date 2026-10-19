@@ -1,4 +1,4 @@
-export const COPY_VERSION = "copy1-2026-10-19";
+export const COPY_VERSION = "copy2-2026-10-19";
 export const COPY = {
   "mode": {
     "fixture": "DEMO MODE: sample data. Try-on images here are placeholders, not YouCam results.",
@@ -85,6 +85,7 @@ export const COPY = {
     "face": "Show the face and shoulders clearly, facing forward.",
     "declined": "YouCam declined to generate this image.",
     "noChange": "Choose a different garment photo; YouCam could not produce a changed image.",
+    "ratio": "Use a less narrow crop before retrying.",
     "generic": "YouCam could not generate this image. Check the photos before retrying.",
     "download": "The result could not be downloaded. Units may have been used.",
     "interrupted": "Processing was interrupted. Check the job status before retrying."
