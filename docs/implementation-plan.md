@@ -1,4 +1,6 @@
-# SecondLook: honest AI try-on for one-of-a-kind thrift listings. Implementation plan v1 (awaiting master acceptance)
+# SecondLook: honest AI try-on for one-of-a-kind thrift listings. Implementation plan v1.1 (SPEC R1 revision; frozen, awaiting master acceptance)
+
+> v1.1 addresses master SPEC R1 items 1–8 (19 Oct 2026). The diff summary is in `docs/decisions/spec-r1-changes.md`. PC-1's disabled core is approved as a narrowing by the master; human consent is still absent.
 
 - **Project key:** `youcam`. **Event:** YouCam API Skin AI & eCommerce VTO Hackathon (Perfect Corp. / Devpost).
 - **Deadline:** 2 Nov 2026 11:45 EST = **Tue 3 Nov 2026 00:45 SGT**. Internal tested checkpoint: **Sun 1 Nov 2026 12:00 SGT**.
@@ -91,7 +93,7 @@ All sources were re-fetched on **19 Oct 2026 00:56 UTC** (Devpost via `curl -A "
    - `GET /s2s/v1.0/client/credit` returns `results[{type, amount_dec, expiry}]`.
    - The hackathon grants 1,000 free units per registered participant via a redeem code. **No purchase, ever.**
 9. **Rate limit:** 250 requests / 300 s per IP **and** per token. 429 on excess; ~5 QPS recommended.
-10. **Retention:** files and generated images are removed after 30 days. No delete endpoint is documented (see PC-1).
+10. **Retention:** the retention page says files are "stored for 30 days" and images are "automatically removed after 30 days". The terms (§12.4) say Perfect "generally" retains data for 30 days and may preserve information when the law requires (§8.8). No delete endpoint is documented (see PC-1).
 11. **Terms:**
     - §3.4 / §12.3: we must collect consent from any person in a photo.
     - §8.6(t): no dataset creation for training.
@@ -187,7 +189,10 @@ youcam/
       client.ts                     # YouCamClient interface (§4.6)                                     [A]
       http-client.ts                # live implementation (fetch, Node ≥24)                             [A]
       fixture-client.ts             # deterministic scenario simulator (§9.4)                           [A]
-      rate-limiter.ts               # token bucket + rolling window                                     [A]
+      rate-limiter.ts               # sliding-log limiter: <3 grants/1 s and <200/300 s (§5.8)         [A]
+      limits.ts                     # all deadlines, retry counts and byte/page caps (§5.8)            [A]
+      net-policy.ts                 # host allowlist, https-only, no redirects, private-IP refusal (§9.7) [A]
+      transport.ts                  # node:https request with policy lookup, bounded body streams      [A]
       redact.ts                     # header/URL/log redaction                                          [A]
       preflight.ts                  # feature-cost + credit -> PreflightRecord                          [A]
     images/
@@ -197,7 +202,7 @@ youcam/
       synth.ts                      # deterministic SVG->PNG synthetic mannequins/garments for fixtures [B]
     server/
       main.ts  app.ts  env.ts       # Hono app, env parsing, mode banner, origin check                  [A]
-      store.ts                      # JSON file store with atomic writes under DATA_DIR                 [A]
+      store.ts                      # single state.json, fsync+rename commits, owner lock, recovery     [A]
       runner.ts                     # job runner: drives job-machine with client + clock + limiter      [A]
       ttl-sweeper.ts                # buyer-session deletion TTL                                        [A]
       routes/{health,photos,listings,jobs,units,buyer,media}.ts                                         [A]
@@ -212,8 +217,12 @@ youcam/
     youcam-preflight.ts             # live, 0 units                                                     [A]
     youcam-probe.ts                 # live, spends units; requires --confirm-units                      [A]
     check-env.ts  screenshots.ts  licenses.ts                                                           [A/D]
+    data-unlock.ts                  # explicit bounded stale-lock recovery (§5.9)                       [A]
   tests/
-    unit/**  property/**  contract/** (mock-youcam.ts = documented-contract mock)  server/**  web/**     [owner of module under test]
+    unit/**  property/**            # pure; runnable without a grant via vitest.pure.config.ts          [owner of module under test]
+    img/**                          # sharp rendering/decoding (grant)                                  [B/D]
+    int/** (contract/ mock-youcam.ts = documented-contract mock, server/, crash/, policy/)  (grant)     [A]
+    web/**                          # RTL + jsdom (grant when run as a set)                             [C]
     e2e/*.spec.ts                                                                                        [C]
   data/  (gitignored; runtime store)
 ```
@@ -304,6 +313,7 @@ interface GeneratedImage {
   id: Id; listingId: Id | null; buyerSessionId: Id | null; jobId: Id; mode: Mode;
   disclosedPath: string;               // ONLY the disclosure-burned version is ever served
   width: number; height: number; label: "ai_tryon_approximate" | "demo_fixture";
+  sha256: string; artifactMissing: boolean;   // set by startup integrity check; cleared only by artifact recovery
   createdAt: IsoTime; expiresAt: IsoTime | null;
 }
 type JobState =
@@ -312,8 +322,9 @@ type JobState =
 interface TryOnAttempt {
   n: number;                            // 1-based; a user retry creates n+1
   state: JobState; taskId: string | null; srcFileId: string | null; refFileId: string | null;
-  postCount: number; getCount: number;  // instrumented for invariants/tests
-  submittedAt: IsoTime | null; deadlineAt: IsoTime | null;
+  postCount: number; getCount: number;  // instrumented; postCount ≤ 3
+  uploadsStartedAt: IsoTime | null; postSendStartedAt: IsoTime | null;   // write-ahead markers (§5.9)
+  attemptDeadlineAt: IsoTime | null; submittedAt: IsoTime | null; deadlineAt: IsoTime | null;
   error: UserError | null; ledgerEntryId: Id | null;
   history: { at: IsoTime; from: JobState; to: JobState; reason: string }[];
 }
@@ -322,6 +333,7 @@ interface TryOnJob {
   garmentPhotoId: Id; modelPhotoId: Id; category: GarmentCategory;
   request: { garment_category: GarmentCategory; change_shoes: false; filter_multi_person: "strict" };
   attempts: TryOnAttempt[]; resultImageId: Id | null; createdAt: IsoTime;
+  requestId: string;                    // client UUID v4 of the admitting request (idempotency)
 }
 interface UserError {
   code: string;                          // our code, e.g. "yc_error_pose", "no_units", "deadline", "uncertain_charge"
@@ -329,17 +341,19 @@ interface UserError {
   retryable: "no" | "user_confirm";      // nothing engine-side is auto-retried
   messageKey: keyof typeof COPY.errors;
 }
+interface ArtifactRecovery { id: Id; jobId: Id; attempt: number; at: IsoTime; outcome: "recovered" | "failed" | "expired"; requestCount: number }
 interface PreflightRecord {
-  at: IsoTime; baseUrl: string;
+  at: IsoTime; baseUrl: string; fenceSeq: number;      // store seq captured before the first preflight request (§5.6)
   featureCost: { matched: { description: string; amount: number; unit: string; proc_unit: number; run_task_url: string }[];
-                 costPerTaskUnits: number | null };   // null => cost_unknown
-  balanceUnits: number | null;                        // sum of non-expired amount_dec
+                 costPerTaskCu: number | null;        // integer centi-units; null => cost_unknown / cost_ambiguous
+                 status: "ok" | "cost_unknown" | "cost_ambiguous" | "cost_invalid" };
+  balanceCu: number | null;                           // integer centi-units, sum of non-expired amount_dec
   ok: boolean; problems: string[];
 }
 interface LedgerEntry {
-  id: Id; jobId: Id; attempt: number; mode: Mode; units: number;
+  id: Id; jobId: Id; attempt: number; mode: Mode; cu: number;   // integer centi-units
   state: "reserved" | "spent" | "released" | "possibly_spent";
-  at: IsoTime; settledAt: IsoTime | null; reason: string;
+  at: IsoTime; createdSeq: number; settledAt: IsoTime | null; settledSeq: number | null; reason: string;
 }
 ```
 
@@ -354,13 +368,15 @@ Every response includes `mode`. Mutating routes require `Content-Type: applicati
 | `POST /api/photos/:id/evaluate` | `{declaration: GarmentDeclaration}` → `QualityReport` | Pure gate over stored raster metrics + declaration + capability. |
 | `GET /api/models` | → `{models: {photoId, label, rightsId, source, synthetic: boolean}[]}` | Fixture: synthetic mannequins. Live: rights-manifest entries with `aiProcessingConsent=true` and an unexpired scope. |
 | `POST /api/listings` / `PATCH /api/listings/:id` / `GET /api/listings/:id` / `GET /api/listings` | Listing fields → `Listing` (+ `readiness:{ready:boolean, missing:string[]}`) | PATCH cannot put generated ids into `garmentPhotoIds` (422 `generated_image_not_cover`). |
-| `GET /api/units` | → `{preflight, budgetUnits, ledger: LedgerEntry[], committedUnits, remainingBudgetUnits}` | Fixture: simulated cost 0, labelled. |
-| `POST /api/listings/:id/tryon` | `{garmentPhotoId, modelPhotoIds: Id[] (1–2), confirmCostUnits: number}` → `{jobs: TryOnJob[]}` | Rejects with 409 `cost_mismatch` if `confirmCostUnits` ≠ cost × N computed now. 402-style 409 `budget_exceeded`, 409 `cost_unknown`, 409 `preflight_stale` (live: >30 min), 409 `quality_failed`, 409 `capability_blocked`, 409 `rights_missing`. All are checked **before** any network call. |
+| `GET /api/units` | → `{preflight, budgetCu, ledger: LedgerEntry[], committedCu, remainingBudgetCu, balanceEstimateCu}` (integer centi-units) | Fixture: simulated cost 0, labelled. |
+| `POST /api/listings/:id/tryon` | `{requestId: uuid, garmentPhotoId, modelPhotoIds: Id[] (1–2), confirmCostCu: integer}` → `{jobs: TryOnJob[]}` | Whole-batch atomic admission (§5.6). A replay of the same requestId returns the stored jobs (200); the same id with a different body → 409 `request_id_conflict`. Other 409s: `cost_mismatch` (confirmCostCu ≠ cost × N computed now), `budget_exceeded`, `insufficient_balance_estimate`, `cost_unknown`/`cost_ambiguous`/`cost_invalid`, `preflight_stale` (live: >30 min), `quality_failed`, `capability_blocked`, `rights_missing`. All are checked **before** any network call; a rejection writes nothing. |
 | `GET /api/jobs/:id` | → `TryOnJob` | Browser polls our server every 1 s (local, free). |
-| `POST /api/jobs/:id/retry` | `{confirmCostUnits}` → `TryOnJob` | Only from `failed`/`timed_out`/`uncertain`/`cancelled`. Creates attempt n+1 with a new ledger reservation. |
+| `POST /api/jobs/:id/retry` | `{requestId, confirmCostCu}` → `TryOnJob` | Only from `failed`/`timed_out`/`uncertain`/`cancelled`. Same admission rules (N=1, idempotent by requestId). Creates attempt n+1 with a new ledger entry. |
+| `POST /api/units/preflight` | `{}` → `PreflightRecord` | Live only, 0 units. Rules per §5.6 fence (`preflight_busy`/`preflight_in_progress`) and §5.8 bounds; started by the "Run check" button. A live grant (L1) is needed before first use. |
+| `POST /api/jobs/:id/artifact-recovery` | `{}` → `ArtifactRecovery` | §5.9 explicit read recovery; never changes the attempt or ledger. |
 | `POST /api/jobs/:id/cancel` | `{}` → `TryOnJob` | Stops local polling. If a taskId exists, the state is `cancelled` and the ledger entry is `possibly_spent`. |
 | `POST /api/buyer-sessions` | `{consentVersion, consentAccepted:true, adultConfirmed:true, isSelfConfirmed:true}` → `{sessionId, expiresAt}` | **403 `buyer_upload_disabled` while PC-1 is not dispositioned (default).** |
-| `POST /api/buyer-sessions/:id/photo` · `POST /api/buyer-sessions/:id/tryon` `{listingId, confirmCostUnits}` | | Same 403 gate. |
+| `POST /api/buyer-sessions/:id/photo` · `POST /api/buyer-sessions/:id/tryon` `{requestId, listingId, confirmCostCu}` | | Same 403 gate. |
 | `DELETE /api/buyer-sessions/:id` | → `DeletionReceipt` | Always available. Idempotent. |
 | `GET /media/:id` | image/jpeg | Only ids present in the store. `Cache-Control: no-store` for buyer media. Serves normalized originals and *disclosed* generated images only. |
 
@@ -388,8 +404,11 @@ interface YouCamClient {
   featureCost(): Promise<PreflightRecord["featureCost"]["matched"]>;   // pages until next_token null
   creditBalance(): Promise<number>;
 }
-// All methods throw YouCamHttpError {kind: "http"|"network_pre_send"|"network_ambiguous"|"timeout"|"parse",
-//   http?: number, errorCode?: string, retryAfterMs?: number} — never containing the key or presigned query strings.
+// Every method takes {signal: AbortSignal} (composed, §5.8) and throws YouCamError
+//   {kind: "http" (status line received) | "transport" (ANY fetch/socket/DNS/TLS rejection; always ambiguous for POST)
+//    | "timeout" | "aborted" | "parse" | "policy" (§9.7 refusal; no request sent) | "too_large",
+//    http?: number, errorCode?: string, retryAfterMs?: number}
+// It never contains the key or presigned query strings. There is no "pre-send" error kind (R1-2).
 ```
 
 Content type mapping: JPEG → `"image/jpg"` (verbatim from the docs; if L2 shows a rejection, switch to `image/jpeg` and record it in `live-evidence.md`). Normalized uploads are always JPEG.
@@ -450,34 +469,30 @@ Metrics are computed on the **normalized** image downscaled to a long side of 51
 ```
 queued --start--> uploading --uploads_ok--> submitting --task_created(taskId)--> polling
 polling --poll(running)--> polling          polling --poll(success,url)--> downloading --downloaded--> succeeded
-polling --poll(error,code)--> failed        polling --deadline--> timed_out
-uploading --upload_failed(definitive)--> failed
-submitting --post_failed(definitive_no_charge: 400 InvalidParameters/BadRequest/CreditInsufficiency, 401)--> failed
-submitting --post_failed(429 | network_pre_send) & retries<3--> submitting (after backoff)
-submitting --post_failed(timeout | network_ambiguous | 5xx | 429 after 3 tries)--> uncertain
-downloading --download_failed(403/410 expired) & refreshes<1--> polling (one GET for a fresh url) ; else --> failed (code result_download_failed; taskId kept)
-any non-terminal --cancel--> cancelled
+polling --poll(error,code)--> failed        polling --task_deadline | attempt_deadline--> timed_out
+uploading --upload_failed(definitive) | upload_phase_deadline | attempt_deadline--> failed          (postCount = 0 ⇒ ledger released)
+submitting --post_response(400 InvalidParameters|BadRequest|CreditInsufficiency|InvalidStyle*, 401)--> failed   (definitive HTTP response; released)
+submitting --post_response(429) & postCount < 3--> submitting (after backoff; next POST is attempt postCount+1)
+submitting --post_response(429) & postCount = 3--> failed (code rate_limited; released: three definitive 429 responses)
+submitting --post_response(5xx | other non-2xx) | post_transport_error(any) | post_timeout | post_parse_error--> uncertain   (possibly_spent)
+submitting --cancel | attempt_deadline, before the POST send was started--> cancelled/failed (released)
+submitting --cancel | attempt_deadline, after the POST send was started--> uncertain (possibly_spent; in-flight request aborted)
+downloading --download_failed(403/410/expired) & refreshes < 1--> polling (one GET for a fresh url)
+downloading --download_failed(other) | refreshes = 1 | download_phase_deadline--> failed (result_download_failed; taskId kept; possibly_spent)
+any non-terminal other state --cancel--> cancelled
 terminal = {succeeded, failed, timed_out, uncertain, cancelled}
 ```
 
+**POST classification rule (R1-2).** Only a **received HTTP status line** is evidence about whether the provider accepted a task. Any rejection from the transport (DNS, connect, TLS, reset, abort, timeout) is **ambiguous**, whatever its error code. The client never infers that the request "wasn't sent" from error classes. The one exception is purely local: the runner durably records `postSendStartedAt` *before* calling the transport (§5.9). If cancel or a deadline fires before that record is written, the POST was never started, and that is local knowledge.
+
 **Invariants** (each has a property test):
-- **I1:** an attempt has at most one `taskId`. Once set, the reducer emits no `create_task` effect for that attempt.
-- **I2:** `postCount ≤ 3`. Auto-retry only after 429 or `network_pre_send`.
+- **I1:** an attempt has at most one `taskId`. Once set, the reducer emits no `create_task` effect for that attempt, in this process or after restart.
+- **I2:** **`postCount ≤ 3` total task-creation POSTs per attempt** (1 initial + at most 2 retries). The only automatic retry trigger is a received HTTP 429. Anything ambiguous → `uncertain`, with no automatic POST, ever.
 - **I3:** terminal states are absorbing. Every event on a terminal attempt is ignored and recorded, and no effects are emitted.
-- **I4:** after `deadlineAt`, no `poll` effect is emitted. `getCount ≤ G_max`, where G_max = ⌈(deadline − 5 s)/pollInterval⌉ + backoff retries + 1 refresh. The bound is computed in the test from the schedule.
-- **I5:** a retry creates attempt n+1. It never reuses a ledger entry, and requires `confirmCostUnits`.
-- **I6:** for every attempt with a `taskId`, the ledger entry is `spent` (success), `possibly_spent` (failed after task creation, timed_out, uncertain, cancelled), or `released` (only for definitive pre-task failures).
-
-**Timing** (env-configurable within bounds; defaults):
-- `YOUCAM_TASK_DEADLINE_MS=300000` (allowed 60,000–900,000), measured from `task_created`.
-- Poll schedule: first at +5 s, every 5 s until +60 s, then every 10 s (docs' "e.g., every 10 seconds").
-- GET failures (429/5xx/network/500 TaskTimeout): exponential backoff 1, 2, 4, 8 … ≤30 s with ±20% jitter. Backoff does not extend the deadline.
-- GET 500 TaskTimeout is retried only until the deadline, then → `timed_out`.
-- Upload: POST /file and PUT each retry ≤3 on 429/5xx/network (no unit cost is documented for uploads). PUT 403 → request a new upload slot once.
-
-**Rate limiter** (`rate-limiter.ts`, process-wide, all live calls): token bucket at 3 req/s, burst 3, **plus** a rolling window of ≤200 requests / 300 s (margin under 250). Calls wait (FIFO) rather than fail. The fixture client uses the same limiter, so tests are realistic.
-
-**Concurrency:** live mode runs at most 1 in-flight attempt (sequential batches, units conservative). Fixture mode allows ≤3.
+- **I4:** no effect of any kind is emitted after the attempt deadline, except durable state writes and cleanup. `getCount ≤ G_max`, where G_max = number of poll slots in the schedule before the task deadline + MAX_GET_RETRIES (8) + 1 refresh. The test computes the bound from the schedule constants.
+- **I5:** a retry creates attempt n+1. It never reuses a ledger entry, and requires `confirmCostCu` and a fresh `requestId`.
+- **I6:** for every attempt whose `postSendStartedAt` is set, the ledger entry is `spent` (success) or `possibly_spent` (everything else), unless every POST received a definitive non-accepting HTTP response (400/401/429×3) → `released`.
+- **I7:** an attempt never issues more than one live request at a time; every request is preceded by a limiter grant.
 
 ### 5.4 Measurements (`src/shared/measurements.ts`, pure)
 
@@ -492,16 +507,95 @@ terminal = {succeeded, failed, timed_out, uncertain, cancelled}
 - **Gallery order:** `garmentPhotoIds` first (cover = index 0), then try-on results in a separate, labelled section. A generated image can never be the cover, in the listing card, or first in DOM order.
 - **Listing text template** (deterministic, from fields): title, tag size ("Tag size: M. Vintage sizes vary, so check the measurements."), measurements table, and condition notes (seller text, with a copy-lint *warning* to the seller when it contains banned claims). The footer is COPY `listing.disclosure` whenever try-on results exist.
 
-### 5.6 Units ledger (`src/domain/ledger.ts`, pure, persisted as `data/ledger.jsonl` append-only)
+### 5.6 Units ledger (`src/domain/ledger.ts` pure; persisted inside `DATA_DIR/state.json` by `src/server/store.ts`, §5.9)
 
-- **reserve(jobId, attempt, units)** succeeds only if `committed + units ≤ YOUCAM_UNIT_BUDGET` (default **120** units; hard max 400). Committed = reserved + spent + possibly_spent. Live mode additionally requires `preflight.balanceUnits ≥ units` from a preflight ≤30 min old.
-- **Reservation is atomic in-process:** a single async mutex around read-check-append, plus a startup replay of the ledger file.
-- **Settlement:** success → `spent`. Definitive pre-task failure → `released`. Anything after `taskId` that isn't success → `possibly_spent`. The docs do not say whether failed tasks are charged, so we count them conservatively.
-- **Fixture mode:** units = 0, entries labelled `mode: fixture`, budget untouched.
+- **Units are integers in centi-units** (`cu`, 1 unit = 100 cu) everywhere internally, to avoid float drift (the provider reports two decimals). Display divides by 100.
+- **Whole-batch admission (R1-4)**, `admit(request) → {ok, entries} | {error}`. Under a process-wide async mutex:
+  1. Validate that `requestId` (UUID v4 from the client, one per Confirm click) is new, or identical to a stored request (same listing, garment, model ids, confirmCost). A replay returns the stored jobs with 200. The same id with a different body → 409 `request_id_conflict`.
+  2. `need = costPerTaskCu × N` (N = 1–2 models).
+  3. Budget: `committedCu + need ≤ YOUCAM_UNIT_BUDGET×100`, where committed = Σ entries in {reserved, spent, possibly_spent}. The default budget is 120 units, with a hard max of 400.
+  4. Live balance estimate (a conservative estimate, never an exact balance; the UI labels it "estimate"):
+     `estimateCu = preflight.balanceCu − Σ cu(entries in {reserved, possibly_spent}, regardless of creation time) − Σ cu(spent entries with settledSeq > preflight.fenceSeq)`.
+     Admit only if `estimateCu − need ≥ costPerTaskCu` (a one-task safety margin for undocumented charge timing). The preflight must be ≤30 min old; otherwise 409 `preflight_stale`.
+     - **Observation fence:** every store commit increments a monotonic `seq`. A preflight starts only under the store mutex when there are **zero non-terminal attempts and zero `reserved` entries** (otherwise 409/exit `preflight_busy`). It records `fenceSeq` = the current seq before its first request is sent, and sets `observing = true`. While observing, admissions are refused (409 `preflight_in_progress`), so no settlement or new commitment can race the balance read. The preflight commit stores `{balanceCu, fenceSeq, at}` and clears `observing`; a failed or aborted preflight also clears it.
+     - Settled `spent` entries with `settledSeq ≤ fenceSeq` are assumed to be reflected in the observed balance. This is the only assumption, and it is mitigated by the margin and the 120-unit budget cap. `possibly_spent` entries are always deducted, even if already reflected (double counting is the conservative error).
+  5. If every check passes, **all N jobs, attempts, entries and the request record are written in one atomic store commit** (§5.9). Otherwise nothing is written, so there is no partial admission (`budget_exceeded` / `insufficient_balance_estimate`).
+- **Settlement:** success → `spent`. Definitive non-accepting HTTP responses only (I6) → `released`. Everything else after `postSendStartedAt` → `possibly_spent`. This is permanent: possibly_spent never returns to released. Charging of failed tasks is undocumented, so we stay conservative.
+- **Fixture mode:** cost 0 cu, entries labelled `mode: fixture`. The admission path is identical, so the same code is tested.
 
 ### 5.7 Buyer session (disabled under PC-1; implemented and tested)
 
 `created(consent) → photo_uploaded → tryon_running → result_ready → deleted`. The TTL is 60 min from creation. `ttl-sweeper.ts` runs every 60 s, deleting files and `GeneratedImage`s and replacing paths in job records with `null` plus the sha256 (the audit stays, the image does not). "Done"/"Delete now" call DELETE. The receipt (§4.5) always includes `retainedByVendor` when any upload happened.
+
+
+### 5.8 Time, cancellation and resource bounds (R1-1, R1-3)
+
+Every operation is finite. All values are constants in `src/youcam/limits.ts` (env override only where noted, within the stated bounds).
+
+| Scope | Bound |
+|---|---|
+| **Attempt** (queued→terminal) | `ATTEMPT_DEADLINE_MS` = upload phase 90 s + `YOUCAM_TASK_DEADLINE_MS` (default 300 s; env 60–600 s) + download phase 60 s + limiter slack 30 s. **Default 480 s, max 780 s.** An absolute `attemptDeadlineAt` is persisted at start. |
+| Upload phase | 90 s total for both images: `POST /file` ≤3 tries × 20 s each; PUT ≤3 tries × 60 s each; PUT 403 → at most one new upload slot per image |
+| Task phase | from `task_created`: poll at +5 s, every 5 s until +60 s, then every 10 s. GET errors (any) → backoff 1, 2, 4, 8, 16, 30 s ±20% jitter, at most `MAX_GET_RETRIES = 8` consecutive. GET 500 TaskTimeout counts as a GET error. Each GET times out at 15 s. |
+| Download phase | 60 s, ≤1 refresh GET, each download times out at 30 s |
+| **Batch** (one admitted request, N ≤ 2, live attempts sequential) | `BATCH_DEADLINE_MS = N × ATTEMPT_DEADLINE_MS`, max 1,560 s. Attempts not started by the batch deadline → `failed` (`batch_deadline`, released). |
+| **Preflight** | 60 s total. `feature-cost`: page_size 20, **≤10 pages** (200 skus); a repeated `next_token` or page 11 → `cost_ambiguous`. Each GET times out at 15 s with ≤2 retries (backoff 1, 2 s). `credit`: 1 GET, ≤2 retries. |
+| **Probe script** | ≤6 tasks sequential, total ≤ 6 × ATTEMPT_DEADLINE_MS, plus a preflight |
+| **Limiter** | **Sliding-log limiter** (one implementation, the same as the test model): a grant is allowed at time t only if the grants in the last 1,000 ms number < 3 **and** the grants in the last 300,000 ms number < 200. Grants are recorded at grant time. A waiter queue is capped at 32 entries; each wait is capped at 30 s, after which the waiter is rejected with `limiter_timeout`. For a POST this happens before send, so the POST is not started (released if postCount = 0). For a GET it counts as a GET error. This stays under the provider's 250/300 s, and the single data-dir lock (§5.9) keeps all live calls of this app in one process. |
+| Response bodies | JSON ≤ 1 MiB (streamed, aborted beyond); result image ≤ 20 MiB; PUT body = the normalized JPEG (< 10,000,000 B, asserted) |
+| Inbound uploads | ≤ 25 MiB request body (Hono body limit) |
+| Image decode (sharp) | Before any decode: magic sniff, then `sharp(buf, {limitInputPixels: 40_000_000, failOn: "error", sequentialRead: true})`. `metadata()` must report width and height ≤ 12,000, `pages` 1 (no animation/multipage), format jpeg/png; otherwise reject `image_too_large`/`image_unsupported`. Globals: `sharp.concurrency(1)`, `sharp.cache(false)`, at most 1 decode at a time (async mutex). |
+| Store | ≤ 500 listings, ≤ 2,000 photos, ≤ 2,000 jobs; beyond → 507 `store_full` (demo scale) |
+
+**Composed cancellation.** Each attempt owns an `AbortController`. Its signal is `AbortSignal.any([attemptController.signal, AbortSignal.timeout(remainingAttemptMs), serverShutdownSignal])`, and each request additionally composes its own per-request timeout. All of these honour that signal:
+- limiter waits and backoff sleeps (an abortable `sleep`);
+- transport calls;
+- body streams;
+- sharp work, which is checked before and after.
+
+Cancel (`POST /api/jobs/:id/cancel`), the attempt or batch deadline, and server shutdown (SIGINT/SIGTERM) all abort through the same tree.
+
+**Owned cleanup.** Each attempt owns `DATA_DIR/tmp/<attemptId>/`. A `finally` block removes it, clears its timers, and releases its limiter waiters and the decode mutex. On startup, any `tmp/*` directory without a live attempt is removed. Shutdown stops accepting requests, aborts attempts, persists their states (§5.9), then exits within 10 s.
+
+### 5.9 Durability, single ownership and crash recovery (R1-4)
+
+- **Single owner (fail closed; no automatic takeover).** At startup the server and every live script acquire `DATA_DIR/.owner.lock` with `fs.open(path, "wx")` (O_CREAT|O_EXCL; atomic on the local APFS volume). They write `{lockId: uuid, pid, startedAt, cmd}`, `fsync` the file, then `fsync` the directory.
+  - **Any** existing lock, whether live, dead-pid, empty, partial or unparseable, makes the starter exit with code 3: "data dir locked (lockId …, pid …); if no SecondLook process is running, run `pnpm data:unlock --lock-id <id>`". PID liveness is **never** grounds for automatic takeover, so PID reuse cannot bless a stale lock.
+  - **Explicit bounded recovery:** `pnpm data:unlock --lock-id <id>` (or `--empty-lock --older-than-s 60` for an empty/unparseable lock).
+    - It refuses unless the file's lockId matches (or the empty-lock age condition holds) **and** `process.kill(pid, 0)` reports the pid not alive.
+    - It then performs one atomic `rename(.owner.lock → .owner.lock.stale-<lockId>)`. A concurrent second unlock gets ENOENT and exits 1.
+    - It does not start the server; the operator restarts it.
+    - It is run only by a person or a lead-approved command.
+  - The lock is removed on clean shutdown, after the final commit.
+  - Tests and scripts use separate DATA_DIRs.
+- **Atomic commits:** the store keeps `state.json` (listings, photos, jobs, requests, ledger). Each commit:
+  1. writes `state.json.tmp`;
+  2. `fsync`s it;
+  3. renames it over `state.json`;
+  4. `fsync`s the directory.
+
+  The commit is serialized by the store mutex. A mutation is a pure function `state → state`; there is no partial write.
+- **Write-ahead rule:** the runner commits the attempt's next intent **before** performing each side effect:
+  - `uploadsStartedAt` before the first `/file` call;
+  - **`postSendStartedAt` + `postCount+1` before each task POST**;
+  - `taskId` immediately when the POST response is received (the same commit moves the state to `polling`);
+  - `resultSha256` after the download is written (file fsynced) and before `succeeded`.
+- **Recovery** on startup (never resubmitting; never any request after an original attempt or batch deadline; terminal states stay absorbing). An attempt that was `downloading` with an upstream success when its deadline passed ends `timed_out`; recovering it would need a new, confirmed, paid retry. This is deliberate.
+
+| Persisted state at crash | Recovery |
+|---|---|
+| queued / uploading, `postSendStartedAt` unset | → `failed` (`interrupted`), ledger `released` (provably no task POST) |
+| submitting, `postSendStartedAt` set, no `taskId` | → `uncertain` (`interrupted_after_send`), ledger `possibly_spent`. **No POST.** |
+| polling / downloading with `taskId` | If `now < attemptDeadlineAt` **and** `now < batchDeadlineAt`: resume with GET/download only, within the **original** deadlines (I4); success → `succeeded`/`spent`, otherwise at the deadline → `timed_out`/`possibly_spent`. If either deadline has passed: → `timed_out`, `possibly_spent`, with **zero requests**. No POST in any case. |
+| succeeded (absorbing) with the result file missing or its hash mismatching | The attempt **stays `succeeded`**; the ledger stays `spent`. The GeneratedImage is marked `artifactMissing: true` and the UI says "Result file missing". **No automatic request.** Recovery is only the separate explicit artifact read below. |
+| a request record whose jobs are not all present (impossible under atomic commit; defensive) | Mark existing entries `possibly_spent` if any POST started, else `released`; log `recovery_inconsistent` |
+
+**Artifact read recovery** (`POST /api/jobs/:id/artifact-recovery`, user-initiated; no unit cost; separate from the attempt state machine):
+- allowed only for a `succeeded` attempt with `artifactMissing`, when `now < submittedAt + 24 h` (C1);
+- at most 3 recoveries per job, one at a time;
+- each recovery is at most 1 GET task + 1 download, with a 60 s deadline, its own AbortController, its own `tmp/<recoveryId>/`, and §5.8 limiter/policy/byte bounds;
+- it records an `ArtifactRecovery {id, jobId, at, outcome}` and **never changes the attempt's state or the ledger**;
+- after 24 h → 409 `artifact_recovery_expired` with zero requests.
 
 ---
 
@@ -525,7 +619,7 @@ terminal = {succeeded, failed, timed_out, uncertain, cancelled}
 | Uncertain | "We lost the connection while starting the job. YouCam may have charged units. We won't retry automatically." Retry needs confirmation. |
 | 401 | "YouCam rejected the API key. Check YOUCAM_API_KEY in your local .env (never share it)." |
 | 429 | Transparent waiting ("Waiting for YouCam rate limit…"). After 3 tries → uncertain/failed as per §5.3. |
-| Buyer disabled | Panel: "Try it on yourself is turned off in this build. YouCam keeps uploaded photos for up to 30 days, and SecondLook can't delete YouCam's copy sooner, so we haven't enabled personal uploads yet." Links to the PC-1 summary in the README. |
+| Buyer disabled | Panel: "Try it on yourself is turned off in this build. We haven't enabled personal photo uploads yet, because SecondLook can't control how long the AI provider keeps them:" followed by `COPY.retention.vendor` rendered verbatim, plus a link to the PC-1 summary in the README. |
 | Listing with try-ons | Section header "AI try-on previews: approximate". Below each image: "AI-generated preview from YouCam. Fit, size, colour and details may differ from the real item. The original photo is shown first." |
 
 ---
@@ -579,21 +673,25 @@ We do **not** attempt to judge visual faithfulness automatically and never claim
 
 - `YOUCAM_MODE` ∈ {fixture, live}; default **fixture**.
 - `live` requires `YOUCAM_API_KEY` to be non-empty. If it's missing, the server **exits with code 2** and the message "YOUCAM_MODE=live but YOUCAM_API_KEY is not set". There is **no fallback to fixture**.
-- `YOUCAM_BASE_URL` (default `https://yce-api-01.makeupar.com`; must be https, except `http://127.0.0.1:*` for the contract mock in tests).
-- `YOUCAM_UNIT_BUDGET` (default 120), `YOUCAM_TASK_DEADLINE_MS`, `BUYER_UPLOAD` (`disabled` default; `enabled` is honoured only if `docs/decisions/PC-1-disposition.md` exists and contains the line `decision: enable-buyer-upload`; otherwise the server logs a refusal and stays disabled), `DATA_DIR` (default `./data`), `PORT`, `VITE_PORT`.
+- `YOUCAM_BASE_URL` (default `https://yce-api-01.makeupar.com`; must match the §9.7 API allowlist; the loopback test exception applies only under `NODE_ENV=test` + `YOUCAM_TEST_LOOPBACK=1`).
+- `YOUCAM_UNIT_BUDGET` (default 120, max 400), `YOUCAM_TASK_DEADLINE_MS` (60,000–600,000), `BUYER_UPLOAD` (`disabled` default; `enabled` is honoured only if `docs/decisions/PC-1-disposition.md` exists and contains the line `decision: enable-buyer-upload`; otherwise the server logs a refusal and stays disabled), `DATA_DIR` (default `./data`), `PORT`, `VITE_PORT`.
 - `.env` is loaded via Node `--env-file-if-exists=.env` (Node ≥22). `.env.example` has empty values only.
 - `check-env.ts` prints **presence** (`YOUCAM_API_KEY: set (length hidden)`), never the value.
 
-### 9.2 Live HTTP client (`http-client.ts`)
+### 9.2 Live transport and HTTP client (`transport.ts`, `http-client.ts`)
 
-- Node global `fetch` with an `AbortSignal.timeout`: 20 s for API calls, 60 s for PUT/download.
-- Headers: `Authorization: Bearer ${key}` on API calls only. Never on the presigned PUT or the result download, since those are S3 URLs.
-- Classification:
-  - DNS/ECONNREFUSED before a request is written → `network_pre_send`;
-  - abort or socket reset after write → `network_ambiguous`/`timeout`;
-  - non-2xx → `http` with a parsed `error_code`;
-  - `Retry-After` honoured (seconds) on 429.
-- The response parser is defensive (Zod `.passthrough()` on unknown fields). A missing `data.task_id` → `parse` error → attempt `uncertain` (a task may exist).
+- **Transport:** `node:https.request` only (no global `fetch`, no third-party HTTP library), so that DNS resolution passes through the policy `lookup` (§9.7) with no time-of-check/time-of-use gap. Options:
+  - `signal` = the composed signal (§5.8);
+  - `maxRedirects` does not exist in node:https, so **any 3xx is an error** (`policy`/`redirect_refused`);
+  - `agent` = a dedicated `https.Agent({keepAlive: true, maxSockets: 2})`, destroyed on shutdown.
+- **Bodies:** response bodies are read through a byte-counting stream that aborts beyond the cap (JSON 1 MiB, image 20 MiB) and records `too_large`. Request bodies are fully buffered and size-asserted before sending.
+- **Headers:** `Authorization: Bearer ${key}` is sent on API-host requests only, never to media hosts. The policy layer enforces this by host: a request to a media host with an Authorization header is a programming error and throws before connect.
+- **Classification (R1-2):**
+  - a received status line → `http` (status, parsed `error_code`, `Retry-After` seconds clamped to 1–30 s);
+  - **every** other failure (DNS, connect, TLS, reset, abort, timeout, premature close) → `transport`/`timeout`/`aborted`.
+
+  The runner treats every non-`http` failure of a task POST as ambiguous (§5.3).
+- **Parsing:** the response parser is defensive (Zod, unknown fields stripped). A 2xx POST without a valid `data.task_id` → `parse` → `uncertain` (a task may exist).
 
 ### 9.3 Error mapping (`src/domain/errors.ts`), exhaustive over the documented codes
 
@@ -634,6 +732,10 @@ This is a deterministic simulator. The scenario is selected by the garment photo
 | `url_expired_once` | first download 403, refresh ok |
 | `url_expired_always` | → failed `result_download_failed` |
 | `get_500_timeout` | GET 500 TaskTimeout ×4 then success |
+| `rate_limited_3` | POST 429 ×3 (→ failed `rate_limited`, released) |
+| `post_transport_error` | POST socket reset after the body is written (→ uncertain) |
+| `post_5xx` | POST 503 (→ uncertain) |
+| `untrusted_media_host` | POST /file returns a PUT URL on a non-allowlisted host (→ policy refusal) |
 
 Fixture `featureCost` returns `[]` and the fixture ledger uses 0 units. **The fixture never fabricates a cloth-v4 price.**
 
@@ -641,14 +743,47 @@ Fixture `featureCost` returns `[]` and the fixture ledger uses 0 units. **The fi
 
 A local Hono server implementing the **documented** request/response shapes exactly (field names, status codes, the presigned PUT route on the same mock with header assertions). The live `http-client.ts` is tested against it. It is labelled in test names as `documented-contract` and **never cited as live evidence**.
 
-### 9.6 Live scripts
+### 9.6 Live scripts and feature-cost binding (R1-5)
 
-- **`pnpm youcam:preflight`** (0 units): calls `feature-cost` (all pages) and `credit`, writes `data/preflight/latest.json`, and prints a redacted summary (cost per task, balance, sku descriptions). Exit codes: 0 ok, 3 `cost_unknown`, 4 auth, 5 network.
-- **`pnpm youcam:probe --plan probes/input-matrix-v1.json --confirm-units <N>`** (spends units):
-  - refuses unless preflight ≤30 min old, N equals plan tasks × cost, N ≤ remaining budget, and every image is in the rights manifest;
-  - runs sequentially;
-  - writes `data/capabilities.live.json` and appends to `docs/live-evidence.md` (task outcome, engine code, dims, sha256, timestamps; no URLs, no images).
+**SKU binding (`preflight.ts`, pure part `bindClothV4Cost(skus, apiHost)`):** a sku matches only if `new URL(run_task_url)` has `protocol === "https:"`, `hostname === apiHost` (the configured allowlisted API host), default port, **`pathname === "/s2s/v2.0/task/cloth-v4"` exactly**, no search and no hash. Then:
+- **0 matches** → `cost_unknown`.
+- **More than 1 match** → `cost_ambiguous`. Live spending stays blocked; all matches are recorded for the lead.
+- **Exactly 1 match** must satisfy:
+  - `amount` is a finite number, 0 ≤ amount ≤ 1,000, with at most 2 decimal places (checked as `Math.round(amount×100) === amount×100` within 1e-9);
+  - `unit === "result_image"`;
+  - `proc_unit` is an integer, 1 ≤ proc_unit ≤ 1,000.
+
+  Otherwise → `cost_invalid`.
+- The **cost per task** is `costPerTaskCu = round(amount × 100)`, i.e. one full charge per task. This is conservative: a task yields one result image and charge granularity is undocumented.
+- `run_task_url` is never used to build a request. The task endpoint is the constant path joined to the allowlisted API host.
+
+**Balance:** `credit.results[]` entries each need `amount_dec` finite with 0 ≤ amount_dec ≤ 1,000,000 at ≤2 dp, `expiry` a finite ms timestamp, and `type` ∈ {ApiSubsToken, ApiPaygToken}. Any invalid entry → the preflight is `ok:false`. The balance is the sum, in cu, of entries with `expiry > now`.
+
+- **`pnpm youcam:preflight`** (0 units, but live: grant required, §11): owner lock; bounds per §5.8; writes `DATA_DIR/preflight/latest.json`; prints a redacted summary. Exit codes: 0 ok, 3 data dir in use, 4 auth, 5 transport/timeout, 6 cost_unknown, 7 cost_ambiguous, 8 cost_invalid, 9 policy.
+- **`pnpm youcam:probe --plan probes/input-matrix-v1.json --confirm-cu <N> --request-id <uuid>`** (spends units; lead + master approval of the exact plan; grant required):
+  - goes through the same admission path as the server;
+  - refuses unless the preflight is ≤30 min old, N equals plan tasks × costPerTaskCu, N fits the budget and balance estimate, and every image is in the rights manifest;
+  - runs sequentially with bounds per §5.8;
+  - writes `DATA_DIR/capabilities.live.json` and appends to `docs/live-evidence.md` (task outcome, engine code, dims, sha256, timestamps, media hostname; no URLs, no images).
 - **A visual judgement of whether a probe "looks usable" is a human note by Johan or the lead, recorded as such; it is never automated or scored.**
+
+
+### 9.7 Network destination policy (`net-policy.ts`), documented host policy (R1-5)
+
+| Destination | Allowed | Notes |
+|---|---|---|
+| API | scheme `https:`, port 443, hostname **exactly** `yce-api-01.makeupar.com`, the host in all docs examples. `YOUCAM_BASE_URL` may only select an entry in `API_HOSTS = ["yce-api-01.makeupar.com"]`. | Test exception: `http://127.0.0.1:<port>` is accepted only when `NODE_ENV=test` **and** `YOUCAM_TEST_LOOPBACK=1`; never in the server's production entry point (asserted at startup). |
+| Presigned upload (PUT) and result download (GET) | scheme `https:`, port 443, hostname in `MEDIA_HOSTS = ["yce-us.s3-accelerate.amazonaws.com"]` (the host in the File API and result examples) | A different hostname in a live response → `policy` refusal (`untrusted_media_host`). The hostname (not the URL) is recorded in `docs/live-evidence.md`. Adding a host needs a lead decision-log entry with the evidence and a code change (no env override). |
+| Anything else | refused | This includes `run_task_url` values from feature-cost, which are **compared, never fetched** (§9.6). |
+
+Additional rules:
+- URLs are parsed with `new URL()`. Userinfo, a non-default port, an IP-literal hostname or a trailing-dot hostname are refused.
+- The **policy `lookup`** wraps `dns.lookup(host, {all: true})`. It refuses if **any** returned address is:
+  - IPv4 loopback 127/8, private 10/8, 172.16/12, 192.168/16, link-local 169.254/16, CGNAT 100.64/10, 0/8, multicast 224/4 or reserved 240/4;
+  - IPv6 `::1`, `::`, ULA `fc00::/7`, link-local `fe80::/10`, multicast `ff00::/8`, or IPv4-mapped forms of the above.
+
+  It then returns only the vetted address to the socket. A unit test covers each range.
+- **No redirects are followed anywhere.** Result images must also sniff as JPEG/PNG and carry `Content-Type` `image/jpeg`/`image/png` (mismatch → `result_invalid`).
 
 ---
 
@@ -675,8 +810,8 @@ Test layers:
 | F1 | lower_body + hanger declaration → capability blocked; **zero** client calls (spy) in both modes |
 | F2 | 511×384 and 512×383 fail; 512×384 and 384×512 pass min_dimensions |
 | F3 | Synthetic σ4 blur fails sharpness, σ0 passes; exposure ×0.2 and ×3 fail. The test also asserts `THRESHOLDS_VERSION` equals the value in this plan and in `docs/calibration.md`. |
-| F4 | `post_ambiguous` → attempt `uncertain`, postCount === 1, no further POST after advancing the clock 1 h, ledger `possibly_spent` |
-| F5 | `rate_limited` → postCount === 3, one taskId, succeeded |
+| F4 | `post_ambiguous` (timeout after the request body is written) → attempt `uncertain`, postCount === 1, no further POST after advancing the clock 1 h, ledger `possibly_spent` |
+| F5 | `rate_limited` (429, 429, then 200) → postCount === 3, one taskId, succeeded. `rate_limited_3` (429 ×3) → `failed` `rate_limited`, postCount === 3 (never 4), ledger `released`. |
 | F6 | `never` → `timed_out` at deadline (±1 poll interval). getCount ≤ computed G_max. After +1 h, getCount is unchanged. |
 | F7 | `url_expired_once` → exactly one refresh GET, succeeded. `url_expired_always` → failed `result_download_failed`, taskId retained. |
 | F8 | `no_units` → failed `no_units`, ledger `released`, no retry |
@@ -691,41 +826,57 @@ Test layers:
 | F17 | A JPEG with EXIF GPS + Orientation=6 → normalized output has no EXIF/XMP/ICC-other-than-sRGB, and is visually rotated (width/height swapped) |
 | F18 | Property: any valid mm 50–2000 → cm display → re-entry round-trips within 1 mm; inches within 3.2 mm |
 | F19 | Cancel during polling → no GET after cancel (clock +1 h); state cancelled; ledger possibly_spent |
-| F20 | 300 scheduled requests through the limiter (fake clock): no 1 s window has >3 and no 300 s window has >200 |
+| F20 | 600 requests through the **same limiter class used in production** (fake clock, bursts and idle gaps generated by fast-check): for every half-open window (s, s+1000 ms] the grant count is ≤3, and for every (s, s+300000 ms] it is ≤200. A waiter beyond 30 s → `limiter_timeout`; a 33rd queued waiter → immediate rejection. |
 | F21 | Every documented engine/HTTP code in the snapshot OpenAPI enum and the error tables maps to a non-generic UserError (the test parses `docs/sources/perfectcorp-ai_clothes-openapi-20261019.yaml` enums, so new docs codes would fail it). An unknown code → `yc_engine` with the raw code kept. |
 | F22 | The PUT uses exactly the method/URL/headers returned by POST /file (mock asserts Content-Type and Content-Length equality) |
 | F23 | Measurements compare panel: no network request contains buyer comparison values (RTL test spying on fetch) |
 | F24 | TTL sweep: a buyer session (enabled under a test disposition) is past 60 min → files gone from disk, media 404, the receipt lists the sha256s and the vendor statement and source URL |
+| F25 | **Crash recovery** (test-only failpoints `YOUCAM_FAILPOINT=<name>` honoured only under NODE_ENV=test; the server process is spawned and killed with SIGKILL against the contract mock): after-admission-before-upload → restart → `failed interrupted`, released, 0 POSTs; after-postSendStartedAt-before-response → `uncertain`, possibly_spent, **total POSTs across both lifetimes = 1**; after-response-before-taskId-commit → `uncertain` (taskId lost), no POST; after-taskId-commit, restarted **before** the original deadlines → GET-only resume → `succeeded`/spent with the same taskId; after-download-before-succeeded → resume completes without a new POST. In every case committed cu never decreases across the restart. |
+| F26 | Ownership: 20 trials of two starters spawned concurrently on one DATA_DIR → exactly one acquires and the other exits 3. A lock left by a SIGKILLed pid, an empty lock and a garbage lock → the starter **still exits 3** (no takeover). `data:unlock` with the wrong lockId, or with a live pid → refused. Two concurrent `data:unlock` runs with the right lockId → exactly one succeeds. |
+| F27 | Idempotency: the same `requestId` and body sent twice concurrently (`Promise.all`) → one set of jobs, one set of ledger entries, both responses identical. The same id with a different modelPhotoIds → 409 `request_id_conflict`, nothing written. |
+| F28 | Whole-batch admission: N=2 with room for only 1 → 409 `budget_exceeded`, **zero** jobs and ledger entries written (state.json byte-identical before and after). |
+| F29 | Balance estimate: preflight balance 10.00 units at T; entries totalling 8.00 units created after T (any of reserved/spent/possibly_spent); a request needing 4.00 → 409 `insufficient_balance_estimate`. Entries created before T are not double-subtracted. |
+| F30 | SKU binding: `run_task_url` values `https://evil.example/s2s/v2.0/task/cloth-v4`, `https://yce-api-01.makeupar.com.evil.com/s2s/v2.0/task/cloth-v4`, `http://yce-api-01.makeupar.com/s2s/v2.0/task/cloth-v4`, `…/cloth-v4/`, `…/cloth-v4?x=1`, `…/cloth-v3` → no match (`cost_unknown`). Two exact matches → `cost_ambiguous`. `amount` ∈ {NaN, −1, 1.234, "2", 1e9, Infinity} → `cost_invalid`. `unit: "second"` → `cost_invalid`. A transport spy proves **no request is ever made to any `run_task_url`**. |
+| F31 | Destination policy: PUT/download URL on a non-allowlisted host, IP literal, userinfo, port 8443 or trailing dot → `policy` refusal with zero sockets opened. Any 301/302/307 from API or media → `redirect_refused`. The policy lookup returning `10.0.0.5`, `169.254.169.254`, `100.64.0.1`, `::1`, `fd00::1` or `::ffff:127.0.0.1` → refused. Authorization is never present on media-host requests (mock asserts). |
+| F32 | Bounded reads: a 2 MiB JSON response → `too_large` and the socket destroyed; a 25 MiB result → `too_large`; feature-cost returning the same `next_token` repeatedly, or 11 pages → `cost_ambiguous` after ≤10 GETs. |
+| F33 | Decode bounds: a 20,000×20,000 PNG (small file) → `image_too_large` before a full decode (RSS increase < 200 MB, measured); an animated PNG / multi-page image → `image_unsupported`; an SVG renamed .jpg → format fail. |
+| F34 | Deadlines and cancellation (fake clock): a hanging upload → terminal by `attemptDeadlineAt` + 1 s; a hanging preflight → error within 60 s; batch N=2 whose first attempt uses the whole budget → the second fails `batch_deadline` and is released. Cancel during (a) limiter wait, (b) backoff sleep, (c) in-flight GET → no further requests, `tmp/<attemptId>` removed, `vi.getTimerCount() === 0`, the limiter queue is empty. |
+| F35 | POST transport failures of every class (ENOTFOUND, ECONNREFUSED, ECONNRESET, TLS error, socket timeout, abort after `postSendStartedAt`) → `uncertain`, postCount 1, no automatic POST. A POST 500/502/503 → `uncertain`. Cancel **before** `postSendStartedAt` is committed → `cancelled`, postCount 0, released. |
+| F36 | Retention wording: `COPY.retention.vendor` equals the frozen text in §13 (sha256 asserted). No other copy, README or doc string contains "30 days" or "30-day" except verbatim quotations of `COPY.retention.vendor`. The F14 patterns additionally ban `\b(guarantee[sd]?|always|permanently|completely)\b.{0,40}\b(delet|remov|eras)` and `\bimmediately (deleted|removed|erased)\b`. |
+| F37 | Balance fence: `reserved`/`possibly_spent` entries created **before** a refreshed preflight are still deducted. `spent` entries settled after `fenceSeq` are deducted; those settled at or before it are not. A preflight while an attempt is non-terminal → `preflight_busy` with zero requests. An admission during an in-progress preflight → 409 `preflight_in_progress`. An estimate that covers need but not need + one-task margin → `insufficient_balance_estimate`. |
+| F38 | Recovery after deadline: crash while polling, restart after `attemptDeadlineAt` (or `batchDeadlineAt`) → `timed_out`/`possibly_spent` and the mock records **zero** requests after restart. Restart before the deadline → only GET/download requests, the last one sent before the original deadline, and none after. |
+| F39 | Missing artifact: delete the result file of a `succeeded` attempt and restart → the state is still `succeeded`, the ledger is `spent`, zero requests at startup. An explicit artifact recovery → ≤1 GET + ≤1 download, attempt state and ledger byte-identical. Past 24 h → 409 `artifact_recovery_expired`, zero requests. A 4th recovery → 409 `artifact_recovery_limit`. Two concurrent recoveries → the second 409 `artifact_recovery_busy`. |
 
 ---
 
 ## 11. Install / run / test / build commands
 
-Run in `$W/projects/youcam` (or the slot worktree). **Heavy** = needs a unique master grant (`control/HEAVY-TASK-PROTOCOL.md`).
+Run in the slot worktree. **Grant** = needs a unique, exact, reviewed master grant (`control/HEAVY-TASK-PROTOCOL.md`; master clarification SPEC R1-6). The grant owner runs only the granted commands, sequentially, and reports the start PID, exit codes and cleanup. **A command marked "grant" never runs on low load alone, or because an estimate has elapsed.**
 
-| Command | Heavy? | Purpose |
+| Command | Needs grant? | Purpose |
 |---|---|---|
-| `export PATH="$HOME/.local/share/vite-plus/bin:$PATH"` | — | node/pnpm |
-| `pnpm install --frozen-lockfile` (first time: `pnpm install` to create the lockfile) | **yes** | deps |
-| `pnpm exec playwright install chromium` | **yes** | browser (store under `$W/cache/youcam/ms-playwright` via `PLAYWRIGHT_BROWSERS_PATH`) |
-| `pnpm typecheck` (`tsc --noEmit`) | no | |
-| `pnpm test:one tests/unit/<file>` | no (targeted) | |
-| `pnpm test` (`vitest run --maxWorkers=1 --no-file-parallelism`) | **yes** (full suite) | |
-| `pnpm fixtures:generate` | no | synthetic DEMO assets |
-| `pnpm dev:fixture` (`YOUCAM_MODE=fixture concurrently "tsx watch src/server/main.ts" "vite"`) | no | local app |
-| `pnpm build` (`vite build && tsc --noEmit`) | **yes** | |
-| `pnpm e2e` (`playwright test`, 1 worker) | **yes** | |
-| `pnpm screenshots` | **yes** | fixture screenshots → `docs/screenshots/fixture/` |
-| `pnpm check:env` | no | presence only |
-| `pnpm youcam:preflight` | no (live; 0 units; **gate L1**) | |
-| `pnpm youcam:probe …` | no (live; **spends units; gate L3**, lead + master approval of the exact plan) | |
-| `pnpm licenses` | no | `pnpm licenses list --json` → `docs/licenses.json` |
+| `export PATH="$HOME/.local/share/vite-plus/bin:$PATH"` | no | node/pnpm |
+| `pnpm install` (first time, creates the lockfile) / `pnpm install --frozen-lockfile` afterwards | **grant** | deps |
+| `pnpm typecheck` (`tsc --noEmit`, single run) | no | |
+| `pnpm test:pure <file…>` (`vitest run --config vitest.pure.config.ts`; includes only `tests/unit/**` and `tests/property/**`; a lint test fails if any pure test imports `sharp`, `node:child_process`, `node:http(s)`, `node:net` or the server) | no (targeted files only, ≤ 3 files per run) | pure domain tests |
+| `pnpm test:pure` with no file arguments (all pure tests) | **grant** | |
+| `pnpm test:img <file>` / `pnpm test:int <file>` (sharp-rendering image tests; contract/server/crash tests with a loopback mock or spawned processes) | **grant** | |
+| `pnpm test` (`vitest run --maxWorkers=1 --no-file-parallelism`, full suite) | **grant** | |
+| `pnpm fixtures:generate` (sharp rendering) | **grant** | synthetic DEMO assets |
+| `pnpm dev:fixture` (dev server) | **grant** | local app |
+| `pnpm build` (`vite build && tsc --noEmit`) | **grant** | |
+| Browser: **first inspect, no install.** `node -e "console.log(require('./node_modules/playwright-core/browsers.json'))"` gives the required chromium revision. Then list existing caches read-only (`ls ~/Library/Caches/ms-playwright $W/cache/*/ms-playwright`). If a matching `chromium-<rev>` (and `chromium_headless_shell-<rev>`) exists, set `PLAYWRIGHT_BROWSERS_PATH` to that directory. Only if none matches, request a grant for `PLAYWRIGHT_BROWSERS_PATH=$W/cache/youcam/ms-playwright pnpm exec playwright install chromium`. | inspect: no; install: **grant** | |
+| `pnpm e2e` (`playwright test`, 1 worker) / `pnpm screenshots` | **grant** | |
+| `pnpm check:env` (presence only) / `pnpm licenses` | no | |
+| `pnpm data:unlock --lock-id <id>` | no grant, but only on explicit lead/Johan instruction after confirming no SecondLook process runs | §5.9 |
+| `pnpm youcam:preflight` (live, 0 units) | **grant** + gate L1 | |
+| `pnpm youcam:probe …` / any live task | **grant** + exact unit count approved by the master (L2–L4) | |
 
 ---
 
 ## 12. Pinned dependencies and licences
 
-Reuse the versions already installed and reviewed in `projects/qloo` (same machine and store), plus sharp. Exact versions are pinned; no `^`/`~`. If a pin fails to resolve, use the nearest patch release and record it in `docs/licenses.md` with the reason.
+Reuse the versions already installed and reviewed in `projects/qloo` (same machine and store), plus sharp. Exact versions are pinned; no `^`/`~`. **There is no silent substitution (R1-8):** if a pin fails to resolve or install, the worker stops and reports. Any version change is an explicit pin-change review: the lead records old→new, the reason, and the lockfile `resolution.integrity` and tarball provenance in `docs/decisions/lead-decision-log.md` before the worker applies it. The committed `pnpm-lock.yaml` is the provenance record, and `docs/licenses.json` is regenerated from it.
 
 | Package | Version | Licence |
 |---|---|---|
@@ -746,7 +897,7 @@ Reuse the versions already installed and reviewed in `projects/qloo` (same machi
 | jsdom | 27.4.0 | MIT |
 | @types/node / @types/react / @types/react-dom | 24.19.2 / 19.3.0 / 19.3.0 | MIT |
 
-**Contingency:** if sharp's prebuilt binary fails on this Intel macOS 15.7, stop and report to the lead. The approved fallback is `jpeg-js` + `pngjs` (MIT) for decode and encode, with disclosure via a pure-JS raster draw; it needs a lead decision-log entry. No other image library is to be installed. Project code licence: MIT (Johan).
+**Contingency:** if sharp's prebuilt binary fails on this Intel macOS 15.7, stop and report to the lead. The approved fallback is `jpeg-js` + `pngjs` (MIT) for decode and encode, with disclosure via a pure-JS raster draw; it needs a lead decision-log entry and an explicit pin review as above. No other image library is to be installed. Project code licence: MIT (Johan).
 
 ---
 
@@ -767,6 +918,10 @@ Reuse the versions already installed and reviewed in `projects/qloo` (same machi
   - in live mode no real-person image is uploaded unless it is in the rights manifest with retention disclosed;
   - local deletion receipts;
   - the vendor-retention statement is always shown with our deletion statement.
+- **Frozen retention copy (R1-7)**, quoted verbatim; the sha256 of each is asserted by F36:
+  - `COPY.retention.local` = "SecondLook deletes its own copies of your photo and the try-on result when you tap Done or Delete now. Otherwise its cleanup removes them about 60 minutes after upload, or when the app next starts if it was stopped."
+  - `COPY.retention.vendor` = "YouCam (Perfect Corp.), which makes the try-on image, keeps its own copy. Its documentation says uploaded and generated images are stored for 30 days and then removed automatically, and its terms say it generally keeps data for 30 days and may keep information longer where the law requires. SecondLook has no way to delete YouCam's copy sooner."
+  - Never promise immediate, complete or guaranteed deletion, or deletion at exactly 30 days. The vendor statement is always attributed to the vendor's documentation and terms.
 - **The server** binds `127.0.0.1` only. There is an origin check, no CORS headers, `X-Content-Type-Options: nosniff`, and CSP on the SPA (`default-src 'self'; img-src 'self' blob:`).
 - **No analytics or third-party scripts and no fonts from CDNs**, so there's no third-party data flow in the UI.
 - **Before every bundle:** a history secret scan (`git log -p | grep -i -E "api[_-]?key|secret|token|password|Bearer "`), with hits reviewed by the lead.
@@ -797,10 +952,10 @@ Slot1 worktree: `git -C $W/projects/youcam worktree add $W/projects/youcam-wt/sl
 
 | Stage | Target date (SGT) | Scope | Acceptance (lead review) | Heavy grants |
 |---|---|---|---|---|
-| **S0 scaffold** | 20 Oct | package.json with exact pins, lockfile, tsconfig strict, configs, `.gitignore`, `.env.example`, `types.ts`+`schemas.ts` (§4 complete), `copy.ts` skeleton with all keys, `banned-phrases.ts` + F14 test, `env.ts` + F16 exit test, `synth.ts` + `gen-fixtures`, README skeleton, `docs/licenses.*` | typecheck clean; targeted tests pass; lockfile committed; no deps beyond §12 | **G-install** (pnpm install) |
-| **S1 domain** | 21–22 Oct | measurements (F18, A4), capabilities (F1), quality metrics/gate/thresholds + calibration doc (F2, F3), normalize/raster (F17), job-machine (I1–I6 property tests), ledger (F9 pure part), listing rules (F13 pure part), errors (F21) | all pure tests are green with targeted runs; calibration expectations hold **without threshold edits** | none (targeted) |
-| **S2 adapter + server** | 23–24 Oct | rate-limiter (F20), redact, http-client + contract mock (F10, F15, F22), fixture client (all scenarios), runner (F4–F8, F19), preflight, store (atomic writes, ledger replay), routes incl. the buyer 403 gate (F12) and TTL sweeper (F24), disclose (F13 pixel) | server tests green; canary test zero hits | **G-suite-1** (full vitest) at end |
-| **S3 UI** | 25–27 Oct | SellerWizard, QualityReport, DeclarationForm, MeasurementsForm, CompareMeasurements (F23), ModelPicker, CostConfirmDialog, JobProgress, Gallery/ListingPage (original-first), BuyerTryOn (disabled explainer + full flow behind the gate), UnitsPanel, ModeBanner, all §6 states | RTL tests; lead exercises `pnpm dev:fixture` via preview/curl | **G-browser-1** (lead/worker preview + e2e smoke) |
+| **S0 scaffold** | 20 Oct | package.json with exact pins, lockfile, tsconfig strict, configs, `.gitignore`, `.env.example`, `types.ts`+`schemas.ts` (§4 complete), `copy.ts` skeleton with all keys, `banned-phrases.ts` + F14 test, `env.ts` + F16 exit test, `synth.ts` + `gen-fixtures`, README skeleton, `docs/licenses.*` | typecheck clean; targeted pure tests pass; lockfile committed; no deps beyond §12 | **G-install** (`pnpm install`); **G-img-0** (`pnpm fixtures:generate` twice + `pnpm test:img tests/img/synth.test.ts`) |
+| **S1 domain** | 21–22 Oct | measurements (F18, A4), capabilities (F1), quality metrics/gate/thresholds + calibration doc (F2, F3), normalize/raster (F17), job-machine (I1–I6 property tests), ledger (F9 pure part), listing rules (F13 pure part), errors (F21) | pure tests green in targeted runs; calibration expectations hold **without threshold edits** | **G-img-1** (`pnpm test:img` for quality/normalize/calibration files, listed exactly in the request) |
+| **S2 adapter + server** | 23–24 Oct | rate-limiter (F20), redact, http-client + contract mock (F10, F15, F22), fixture client (all scenarios), runner (F4–F8, F19), preflight, store (atomic writes, ledger replay), routes incl. the buyer 403 gate (F12) and TTL sweeper (F24), disclose (F13 pixel) | server, contract, crash and policy tests green (F4–F12, F15, F19–F22, F25–F39); canary test zero hits | **G-int-1** (`pnpm test:int` listed files), then **G-suite-1** (`pnpm test`) |
+| **S3 UI** | 25–27 Oct | SellerWizard, QualityReport, DeclarationForm, MeasurementsForm, CompareMeasurements (F23), ModelPicker, CostConfirmDialog, JobProgress, Gallery/ListingPage (original-first), BuyerTryOn (disabled explainer + full flow behind the gate), UnitsPanel, ModeBanner, all §6 states | RTL tests; lead exercises the fixture app | **G-dev-1** (`pnpm dev:fixture` for a bounded review session, owner named) after the read-only browser-cache inspection |
 | **S4 live tooling + E2E + screenshots** | 28–29 Oct | `youcam-preflight`, `youcam-probe`, `probes/input-matrix-v1.json` (§16), manifest schema + enforcement (F11), e2e specs (seller happy path, gate fail, lower-body block, cost confirm, uncertain path, buyer disabled), `pnpm screenshots` (fixture) | e2e green; screenshots show the DEMO banner | **G-e2e**, **G-build** |
 | **S5 docs/hardening** | 30–31 Oct | README (install/run/test/live setup without secrets, PC-1 summary, fixture vs live), `docs/test-report.md`, `docs/live-evidence.md` (if any), fixes from lead review | full gate green on the frozen SHA | **G-suite-final**, **G-build-final** |
 | **Checkpoint** | by 1 Nov 12:00 | Lead: secret scan, bundle, exports, `publish-ready.json` last | — | — |
@@ -822,7 +977,7 @@ If the master later allocates more slots: slot2 = group B (quality gate + images
 | Gate | Condition to pass | If not passed |
 |---|---|---|
 | **L0 access** (external) | Johan: Devpost registration → redeem-code email → YouCam API account + email verification → redeem 1,000 units → create an API key → put `YOUCAM_API_KEY` in RP `$W/projects/youcam/.env` himself | Build continues in fixture mode, labelled DEMO. blockers.json B1–B3. |
-| **L1 preflight** (0 units) | feature-cost contains a cloth-v4 sku (`run_task_url` ends `/s2s/v2.0/task/cloth-v4`); balance known | `cost_unknown` → no live tasks; report to the master |
+| **L1 preflight** (0 units; grant) | exactly one feature-cost sku bound per §9.6 (https, allowlisted API host, exact path `/s2s/v2.0/task/cloth-v4`; valid amount/unit/proc_unit); balance valid | `cost_unknown`/`cost_ambiguous`/`cost_invalid` → no live tasks; report to the master |
 | **L2 smoke** (1 task) | rights manifest entry for Johan (consent incl. 30-day retention, recorded by Johan); one upper_body hanger task reaches success or a documented error | Record the outcome; fix the adapter only on contract mismatches (e.g. `image/jpg`) |
 | **L3 input probe** (pre-registered, ≤6 tasks) | `probes/input-matrix-v1.json`: (1) hanger upper_body, (2) flat-lay upper_body, (3) flat-lay upper_body second garment, (4) hanger outer, (5) worn upper_body (Johan), (6) hanger full_body dress *only if Johan owns one*. **Flat-lay rule (pre-registered):** `live_ok` only if both #2 and #3 reach `success`; any `error_invalid_ref`/`error_editing_failed`/`error_apply_region_mismatch` on #2 or #3 → `live_failed`, and the UI narrows to hanger/mannequin/worn. Visual usability is a recorded human note, not a metric. | Narrow scope to documented inputs (accepted fallback) |
 | **L4 demo batch** | L1–L3 done; exact task list and units approved by the master; total live spend ≤ YOUCAM_UNIT_BUDGET (120) | Video uses fixture footage, labelled |
@@ -833,7 +988,9 @@ If the master later allocates more slots: slot2 = group B (quality gate + images
 
 ---
 
-## 17. Mandatory contest artifacts checklist (status as of v1)
+## 17. Mandatory contest artifacts checklist (status as of v1.1)
+
+The checklist is not complete while RG2 is open. A fixture-only build is never reported as a final contest pass.
 
 | Artifact | Status | Owner |
 |---|---|---|
@@ -851,7 +1008,7 @@ If the master later allocates more slots: slot2 = group B (quality gate + images
 ## 18. Release gates (none are authorized now; all are Johan's actions unless stated)
 
 - **RG1:** clean main bundle, relayed by the main Mac to the private repo (verified by the coordinator; a bundle is not an upload).
-- **RG2:** live integration verified (L2 minimum, L4 for live video) or honestly labelled fixture-only.
+- **RG2:** live integration verified (L2 minimum, L4 for live video). **Without it the project is not a final contest pass or contest-ready (R1-7).** Its status stays "local fixture verified; live integration implemented but unverified", and no export, README or submission draft may say otherwise.
 - **RG3:** video recorded/approved/published by Johan.
 - **RG4:** repo shared with the Devpost support address.
 - **RG5:** judge-access decision (public hosting is not authorized in this workflow).

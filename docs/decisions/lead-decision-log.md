@@ -11,3 +11,6 @@
 | D7 | 19 Oct 2026 | Treat failed-after-task-created attempts as `possibly_spent`; no auto-retry of task creation except on 429/pre-send network errors | Charging of failed tasks is undocumented; avoid double charges |
 | D8 | 19 Oct 2026 | Reuse the Qloo-reviewed stack pins plus sharp 0.35.5 | The same machine has already installed and reviewed these versions |
 | D9 | 19 Oct 2026 | Theme-fit risk noted (the eCommerce VTO topic text mentions combining beauty and fashion); no beauty/skin addition | Rules require ≥1 API; the accepted decision forbids a skin pivot |
+| D10 | 19 Oct 2026 | SPEC R1 accepted into plan v1.1 (finite bounds, ≤3 POSTs/429-only retry, sliding-log limiter, durable admission/recovery, exact SKU binding + host policy, grant classification, PC-1 approved disabled core, explicit pin review) | Master SPEC R1 review; diff in `spec-r1-changes.md` |
+| D11 | 19 Oct 2026 | Balance observation fence, fail-closed owner lock with explicit unlock, no post-deadline requests, absorbing succeeded + separate artifact read recovery | Master follow-up consistency items |
+| D12 | 19 Oct 2026 | Use `node:https` (not fetch) for live calls so DNS goes through the policy lookup | Avoids a TOCTOU gap in private-address refusal without adding an HTTP dependency |
