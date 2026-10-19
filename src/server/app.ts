@@ -52,7 +52,8 @@ export function createApp(env: AppEnv, services?: Services, fixtureUi?: FixtureU
       const asset = staticMap.get(path);
       if (asset) {
         c.header('Content-Type', asset.mime); c.header('Content-Length', String(asset.bytes.byteLength));
-        return c.body(c.req.method === 'HEAD' ? null : new Uint8Array(asset.bytes));
+        if (c.req.method === 'HEAD') return c.body(null);
+        return c.body(new Uint8Array(asset.bytes));
       }
     }
     await next();
