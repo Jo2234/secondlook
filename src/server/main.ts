@@ -5,6 +5,7 @@ import { loadEnv, EnvError } from './env.js';
 import { createApp } from './app.js';
 import { Store, StoreLocked } from './store.js';
 import { Runner } from './runner.js';
+import { HttpLifetime } from './http-lifetime.js';
 import { newId } from './routes/fixture.js';
 import { FixtureClient, FIXTURE_SCENARIOS, scenarioForHash } from '../youcam/fixture-client.js';
 import { SlidingLogLimiter } from '../youcam/rate-limiter.js';
@@ -22,17 +23,22 @@ async function main(): Promise<void> {
   if (env.buyerUploadRefused || env.buyerUpload === 'enabled') console.error('Buyer upload disabled: this source checkpoint implements the disabled core only');
   const store = await Store.acquire(env.dataDir), shutdown = new AbortController();
   const limiter = new SlidingLogLimiter(systemClock);
-  let server: ReturnType<typeof serve> | undefined, runner: Runner | undefined, stopping = false, ready = false;
-  const stop = async () => {
-    if (stopping) return; stopping = true;
-    const deadline = setTimeout(() => { console.error('shutdown_deadline; owner lock retained'); process.exit(1); }, SHUTDOWN_MS); deadline.unref();
-    shutdown.abort();
-    try {
-      if (server) await new Promise<void>((resolve, reject) => server!.close(error => error ? reject(error) : resolve()));
-      await runner?.drain(); limiter.dispose(); await store.close(); clearTimeout(deadline);
-    } catch { console.error('shutdown_failed; owner lock retained'); process.exitCode = 1; }
-  };
-  for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, () => { shutdown.abort(); if (ready) void stop(); });
+  let runner: Runner | undefined, deadline: ReturnType<typeof setTimeout> | undefined;
+  let finishStartup!: () => void;
+  const startup = new Promise<void>(resolve => { finishStartup = resolve; });
+  const signals = ['SIGINT', 'SIGTERM'] as const;
+  const http = new HttpLifetime({
+    stopAdmission: () => { runner?.stopAdmission(); }, cancel: () => { shutdown.abort(); },
+    armDeadline: () => {
+      deadline ??= setTimeout(() => { console.error('shutdown_deadline; ownership not cleanly released'); process.exit(1); }, SHUTDOWN_MS);
+    },
+    joinStartup: () => startup, joinRunner: () => runner?.drain() ?? Promise.resolve(),
+    dispose: () => { limiter.dispose(); }, closeStore: () => store.close(),
+    clearDeadline: () => { clearTimeout(deadline); },
+    removeSignals: () => { for (const signal of signals) process.removeListener(signal, onSignal); },
+  });
+  const onSignal = () => { http.stop(); }; // stop observes and retains the same task before returning.
+  for (const signal of signals) process.once(signal, onSignal);
   try {
     // No work from a previous owner is live: lock acquisition preceded this finite cleanup.
     await rm(store.path('tmp'), { recursive: true, force: true });
@@ -66,17 +72,40 @@ async function main(): Promise<void> {
         return { ...result, id: imageId, listingId: job.listingId, buyerSessionId: job.buyerSessionId, jobId: job.id, mode: 'fixture', disclosedPath: `generated/${imageId}.jpg`, label: 'demo_fixture', artifactMissing: false, createdAt: new Date().toISOString(), expiresAt: null };
       },
     });
+    if (shutdown.signal.aborted) runner.stopAdmission();
     // Startup recovery is awaited; all admitted resumptions are GET/download only.
-    if (recovery.resume.length) await runner.runBatch(recovery.resume, true);
-    if (shutdown.signal.aborted) { await stop(); return; }
-    ready = true;
-    server = serve({ fetch: createApp(env, { store, runner, signal: shutdown.signal }).fetch, hostname: '127.0.0.1', port: env.port });
+    for (const id of recovery.resume) {
+      if (shutdown.signal.aborted) break;
+      await runner.resume(id);
+    }
+    if (!shutdown.signal.aborted) {
+      const app = createApp(env, { store, runner, signal: shutdown.signal });
+      const server = serve({
+        fetch: (...args) => http.handle(() => app.fetch(...args), () => new Response(JSON.stringify({ mode: env.mode, error: 'server_closed' }), { status: 503, headers: { 'Content-Type': 'application/json' } })),
+        hostname: '127.0.0.1', port: env.port,
+      });
+      // Install the bridge in the same turn as serve, before asynchronous bind events.
+      http.attach({
+        subscribe: events => {
+          const onReady = () => { events.ready(); }, onError = (error: Error) => { events.error(error); }, onClose = () => { events.close(); };
+          server.on('listening', onReady); server.on('error', onError); server.on('close', onClose);
+          if (server.listening) events.ready();
+          return () => { server.removeListener('listening', onReady); server.removeListener('error', onError); server.removeListener('close', onClose); };
+        },
+        close: () => new Promise<void>((resolve, reject) => {
+          server.close(error => {
+            // joinListener waits for ready/error/close first; this cannot excuse a pending bind.
+            if (error && (error as NodeJS.ErrnoException).code !== 'ERR_SERVER_NOT_RUNNING') reject(error); else resolve();
+          });
+        }),
+      });
+    }
   } catch (error) {
-    // Keep the owner lock on startup failure: recovery is manual and quiescent.
-    shutdown.abort(); limiter.dispose(); await runner?.drain().catch(() => undefined); throw error;
-  }
+    http.fail(error); // Sticky startup failure keeps the lock; cleanup is already observed.
+  } finally { finishStartup(); }
+  await http.wait(); // Actual startup, listener, disconnected handlers and Runner all joined.
 }
 main().catch(error => {
-  console.error(error instanceof EnvError || error instanceof StoreLocked ? error.message : 'Server startup failed; owner lock may require quiescent recovery');
+  console.error(error instanceof EnvError || error instanceof StoreLocked ? error.message : 'Server lifetime failed; owner lock release not confirmed');
   process.exitCode = error instanceof EnvError || error instanceof StoreLocked ? error.exitCode : 1;
 });

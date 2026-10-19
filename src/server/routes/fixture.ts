@@ -14,6 +14,7 @@ import { batchDeadlineMs } from '../../youcam/limits.js';
 import type { AppEnv } from '../env.js';
 import type { Store } from '../store.js';
 import type { Runner } from '../runner.js';
+import { RuntimeRefused } from '../owned-runtime.js';
 import { deleteBuyer, sweepExpired } from '../ttl-sweeper.js';
 export const newId = (): string => randomUUID().replaceAll('-', '').slice(0, 20);
 export class RouteError extends Error {
@@ -28,7 +29,10 @@ export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void 
   const listingResponse = (listing: Listing) => {
     const state = store.snapshot(); return { ...listing, readiness: readiness(listing, Object.fromEntries(state.qualities.map(q => [q.photoId, q])), new Set(state.images.map(i => i.id))), mode: env.mode };
   };
-  app.use('/api/*', async (_c, next) => { await sweepExpired(store, Date.now()); await next(); });
+  app.use('/api/*', async (c, next) => {
+    if (services.signal.aborted && !['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) throw new RouteError('runner_closed', 503);
+    await sweepExpired(store, Date.now()); await next();
+  });
   app.get('/api/models', c => c.json({ mode: env.mode, models: store.snapshot().photos.filter(p => p.role === 'model' && p.source === 'synthetic').map(p => ({ photoId: p.id, label: 'DEMO synthetic mannequin', rightsId: p.rightsId, source: p.source, synthetic: true })) }));
   app.post('/api/photos', async c => {
     if (env.mode !== 'fixture') throw new RouteError('live_execution_not_ready', 503);
@@ -79,29 +83,50 @@ export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void 
     if (env.mode !== 'fixture') throw new RouteError('live_execution_not_ready', 503);
     const listingId = id(c.req.param('id')), parsed = TryOnRequestSchema.safeParse(await c.req.json());
     if (!parsed.success) throw new RouteError('invalid_request', 400);
-    let jobIds: string[] = [], replay = false;
-    await store.commit(state => {
-      const allocations = parsed.data.modelPhotoIds.map(() => ({ entryId: newId(), jobId: newId(), attempt: 1 }));
-      const admission = admit({ state: { entries: state.ledger, requests: state.requests, seq: state.seq, observing: state.observing }, body: { ...parsed.data, listingId }, mode: env.mode, budgetCu: env.budgetCu, preflight: state.preflight, now: now(), allocations });
-      if (!admission.ok) throw new RouteError(admission.error); jobIds = admission.jobIds; replay = admission.replay;
-      if (replay) return state;
-      const listing = state.listings.find(l => l.id === listingId), photo = state.photos.find(p => p.id === parsed.data.garmentPhotoId && p.role === 'garment');
-      if (!listing || !photo || !listing.garmentPhotoIds.includes(photo.id) || !listing.declaration) throw new RouteError('quality_failed');
-      if (!capabilityAllows(capability(listing.declaration.photoType, listing.declaration.category), env.mode)) throw new RouteError('capability_blocked');
-      const quality = state.qualities.find(q => q.photoId === photo.id);
-      const d = listing.declaration;
-      if (!d.singleGarment || !d.frontFacing || !d.notComposite || !d.fullyVisible || !d.noPeopleInPhoto && d.photoType !== 'worn') throw new RouteError('quality_failed');
-      if (!quality?.spendAllowed || quality.capability?.photoType !== listing.declaration.photoType || quality.capability?.category !== listing.declaration.category) throw new RouteError('quality_failed');
-      if (parsed.data.modelPhotoIds.some(modelId => !state.photos.some(p => p.id === modelId && p.role === 'model' && p.source === 'synthetic'))) throw new RouteError('rights_missing');
-      state.ledger = [...admission.state.entries]; state.requests = [...admission.state.requests];
-      allocations.forEach((allocation, index) => {
-        const category = listing.declaration!.category;
-        state.jobs.push({ id: allocation.jobId, mode: env.mode, listingId, buyerSessionId: null, garmentPhotoId: photo.id, modelPhotoId: parsed.data.modelPhotoIds[index]!, category, request: { garment_category: category, change_shoes: false, filter_multi_person: 'strict' }, attempts: [createAttempt(1, allocation.entryId)], resultImageId: null, createdAt: now(), requestId: parsed.data.requestId });
+    store.assertWritable();
+    const body = { ...parsed.data, listingId };
+    const response = (jobIds: string[]) => {
+      const state = store.snapshot(), jobs = jobIds.map(jobId => state.jobs.find(job => job.id === jobId));
+      if (jobs.some(job => !job)) throw new RouteError('admission_record_inconsistent', 503);
+      return c.json({ mode: env.mode, jobs });
+    };
+    // A proven durable replay consumes no capacity, creates no promise of new work and writes nothing.
+    // Never use this snapshot after a failed/unknown store commit.
+    const known = store.snapshot();
+    if (known.requests.some(request => request.requestId === body.requestId)) {
+      const replay = admit({ state: { entries: known.ledger, requests: known.requests, seq: known.seq, observing: known.observing }, body, mode: env.mode, budgetCu: env.budgetCu, preflight: known.preflight, now: now(), allocations: [] });
+      if (!replay.ok) throw new RouteError(replay.error);
+      return response(replay.jobIds);
+    }
+    const jobIds = await runner.admit(async () => {
+      let admittedIds: string[] = [], replay = false;
+      await store.commit(state => {
+        const allocations = parsed.data.modelPhotoIds.map(() => ({ entryId: newId(), jobId: newId(), attempt: 1 }));
+        const admittedAt = now();
+        const admission = admit({ state: { entries: state.ledger, requests: state.requests, seq: state.seq, observing: state.observing }, body, mode: env.mode, budgetCu: env.budgetCu, preflight: state.preflight, now: admittedAt, allocations });
+        if (!admission.ok) throw new RouteError(admission.error); admittedIds = admission.jobIds; replay = admission.replay;
+        if (replay) return state;
+        // Recheck after store serialization: a failure/shutdown may have fenced the reservation.
+        runner.assertAdmissionOpen();
+        const listing = state.listings.find(l => l.id === listingId), photo = state.photos.find(p => p.id === parsed.data.garmentPhotoId && p.role === 'garment');
+        if (!listing || !photo || !listing.garmentPhotoIds.includes(photo.id) || !listing.declaration) throw new RouteError('quality_failed');
+        if (!capabilityAllows(capability(listing.declaration.photoType, listing.declaration.category), env.mode)) throw new RouteError('capability_blocked');
+        const quality = state.qualities.find(q => q.photoId === photo.id);
+        const d = listing.declaration;
+        if (!d.singleGarment || !d.frontFacing || !d.notComposite || !d.fullyVisible || !d.noPeopleInPhoto && d.photoType !== 'worn') throw new RouteError('quality_failed');
+        if (!quality?.spendAllowed || quality.capability?.photoType !== listing.declaration.photoType || quality.capability?.category !== listing.declaration.category) throw new RouteError('quality_failed');
+        if (parsed.data.modelPhotoIds.some(modelId => !state.photos.some(p => p.id === modelId && p.role === 'model' && p.source === 'synthetic'))) throw new RouteError('rights_missing');
+        state.ledger = [...admission.state.entries]; state.requests = [...admission.state.requests];
+        allocations.forEach((allocation, index) => {
+          const category = listing.declaration!.category;
+          state.jobs.push({ id: allocation.jobId, mode: env.mode, listingId, buyerSessionId: null, garmentPhotoId: photo.id, modelPhotoId: parsed.data.modelPhotoIds[index]!, category, request: { garment_category: category, change_shoes: false, filter_multi_person: 'strict' }, attempts: [createAttempt(1, allocation.entryId)], resultImageId: null, createdAt: admittedAt, requestId: parsed.data.requestId });
+        });
+        state.batches.push({ requestId: parsed.data.requestId, jobIds: admittedIds, deadlineAt: new Date(Date.parse(admittedAt) + batchDeadlineMs(admittedIds.length, env.taskDeadlineMs)).toISOString() }); return state;
       });
-      state.batches.push({ requestId: parsed.data.requestId, jobIds, deadlineAt: new Date(Date.now() + batchDeadlineMs(jobIds.length, env.taskDeadlineMs)).toISOString() }); return state;
-    });
-    if (!replay) await runner.runBatch(jobIds);
-    return c.json({ mode: env.mode, jobs: store.snapshot().jobs.filter(j => jobIds.includes(j.id)) });
+      return { value: admittedIds, jobIds: admittedIds, replay };
+    }, error => error instanceof RouteError || error instanceof RuntimeRefused && error.code === 'runner_closed' || error instanceof Error && error.message === 'store_full');
+    // The runtime has retained the work. This response awaits admission durability only.
+    return response(jobIds);
   });
   app.get('/api/jobs/:id', c => { const job = store.snapshot().jobs.find(j => j.id === id(c.req.param('id'))); if (!job) throw new RouteError('not_found', 404); return c.json({ ...job, mode: env.mode }); });
   app.post('/api/jobs/:id/retry', async c => {
@@ -111,12 +136,13 @@ export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void 
   });
   app.post('/api/jobs/:id/cancel', async c => {
     const jobId = id(c.req.param('id'));
+    runner.cancel(jobId);
     const state = await store.commit(state => {
       const job = state.jobs.find(j => j.id === jobId); if (!job) throw new RouteError('not_found', 404);
       const result = step(job.attempts.at(-1)!, { type: 'cancel' }, now()); job.attempts[job.attempts.length - 1] = result.attempt;
       for (const effect of result.effects) if (effect.type === 'settle') { const entry = state.ledger.find(e => e.id === result.attempt.ledgerEntryId); if (entry && entry.state !== 'spent' && entry.state !== 'released') { entry.state = effect.state; entry.settledAt = now(); entry.settledSeq = state.seq + 1; entry.reason = 'cancel'; } }
       return state;
-    }); runner.cancel(jobId); return c.json({ ...state.jobs.find(j => j.id === jobId)!, mode: env.mode });
+    }); return c.json({ ...state.jobs.find(j => j.id === jobId)!, mode: env.mode });
   });
   app.post('/api/jobs/:id/artifact-recovery', c => c.json({ mode: env.mode, error: 'artifact_recovery_not_ready' }, 503));
   for (const path of ['/api/buyer-sessions', '/api/buyer-sessions/:id/photo', '/api/buyer-sessions/:id/tryon']) app.post(path, c => c.json({ mode: env.mode, error: 'buyer_upload_disabled', local: COPY.retention.local, vendor: COPY.retention.vendor }, 403));

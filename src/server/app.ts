@@ -9,6 +9,8 @@ import { INBOUND_MAX_BYTES } from '../youcam/limits.js';
 import { ImageInputError } from '../images/input-policy.js';
 import { fixtureRoutes, RouteError } from './routes/fixture.js';
 import type { Services } from './routes/fixture.js';
+import { RuntimeRefused } from './owned-runtime.js';
+import { StoreCommitError } from './store.js';
 export function createApp(env: AppEnv, services?: Services) {
   const app = new Hono();
   app.use('*', async (c, next) => {
@@ -33,6 +35,8 @@ export function createApp(env: AppEnv, services?: Services) {
   for (const path of ['/api/buyer-sessions', '/api/buyer-sessions/:id/photo', '/api/buyer-sessions/:id/tryon']) app.post(path, c => c.json({ mode: env.mode, error: 'buyer_upload_disabled' }, 403));
   app.notFound(c => c.json({ mode: env.mode, error: 'not_found' }, 404));
   app.onError((error, c) => {
+    if (error instanceof StoreCommitError) return c.json({ mode: env.mode, error: error.message }, 503);
+    if (error instanceof RuntimeRefused) return c.json({ mode: env.mode, error: error.code }, 503);
     if (error instanceof RouteError) return c.json({ mode: env.mode, error: error.message }, error.status);
     if (error instanceof ImageInputError) return c.json({ mode: env.mode, error: error.code }, 422);
     if (error instanceof SyntaxError) return c.json({ mode: env.mode, error: 'invalid_request', issues: [] }, 400);
