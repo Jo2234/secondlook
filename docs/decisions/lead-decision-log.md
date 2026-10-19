@@ -14,3 +14,4 @@
 | D10 | 19 Oct 2026 | SPEC R1 accepted into plan v1.1 (finite bounds, ≤3 POSTs/429-only retry, sliding-log limiter, durable admission/recovery, exact SKU binding + host policy, grant classification, PC-1 approved disabled core, explicit pin review) | Master SPEC R1 review; diff in `spec-r1-changes.md` |
 | D11 | 19 Oct 2026 | Balance observation fence, fail-closed owner lock with explicit unlock, no post-deadline requests, absorbing succeeded + separate artifact read recovery | Master follow-up consistency items |
 | D12 | 19 Oct 2026 | Use `node:https` (not fetch) for live calls so DNS goes through the policy lookup | Avoids a TOCTOU gap in private-address refusal without adding an HTTP dependency |
+| D13 | 19 Oct 2026 | Omit the data:unlock executable; stale-lock recovery is quiescent manual only; F40 inventories lock mutations | Master R1 follow-up: an unlock rename races a new starter |

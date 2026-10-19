@@ -217,7 +217,6 @@ youcam/
     youcam-preflight.ts             # live, 0 units                                                     [A]
     youcam-probe.ts                 # live, spends units; requires --confirm-units                      [A]
     check-env.ts  screenshots.ts  licenses.ts                                                           [A/D]
-    data-unlock.ts                  # explicit bounded stale-lock recovery (§5.9)                       [A]
   tests/
     unit/**  property/**            # pure; runnable without a grant via vitest.pure.config.ts          [owner of module under test]
     img/**                          # sharp rendering/decoding (grant)                                  [B/D]
@@ -560,13 +559,18 @@ Cancel (`POST /api/jobs/:id/cancel`), the attempt or batch deadline, and server 
 ### 5.9 Durability, single ownership and crash recovery (R1-4)
 
 - **Single owner (fail closed; no automatic takeover).** At startup the server and every live script acquire `DATA_DIR/.owner.lock` with `fs.open(path, "wx")` (O_CREAT|O_EXCL; atomic on the local APFS volume). They write `{lockId: uuid, pid, startedAt, cmd}`, `fsync` the file, then `fsync` the directory.
-  - **Any** existing lock, whether live, dead-pid, empty, partial or unparseable, makes the starter exit with code 3: "data dir locked (lockId …, pid …); if no SecondLook process is running, run `pnpm data:unlock --lock-id <id>`". PID liveness is **never** grounds for automatic takeover, so PID reuse cannot bless a stale lock.
-  - **Explicit bounded recovery:** `pnpm data:unlock --lock-id <id>` (or `--empty-lock --older-than-s 60` for an empty/unparseable lock).
-    - It refuses unless the file's lockId matches (or the empty-lock age condition holds) **and** `process.kill(pid, 0)` reports the pid not alive.
-    - It then performs one atomic `rename(.owner.lock → .owner.lock.stale-<lockId>)`. A concurrent second unlock gets ENOENT and exits 1.
-    - It does not start the server; the operator restarts it.
-    - It is run only by a person or a lead-approved command.
-  - The lock is removed on clean shutdown, after the final commit.
+  - **Any** existing lock, whether live, dead-pid, empty, partial or unparseable, makes the starter exit with code 3: "data dir locked (lockId …, pid …). See README 'Recovering a stale data-dir lock'." PID liveness is **never** grounds for takeover, so PID reuse cannot bless a stale lock.
+  - **No unlock executable in the MVP (R1 lock race).** The application contains exactly two lock mutations:
+    1. the starter's `open(…, "wx")` create;
+    2. the owner's clean-shutdown removal, which unlinks only if the file still contains the owner's own lockId; otherwise it leaves the file and logs `lock_mismatch_on_shutdown`.
+
+    No code path renames, overwrites or deletes another process's lock.
+  - **Stale-lock recovery is a documented quiescent manual procedure** (README) with **no promised concurrent safety**:
+    1. stop every SecondLook server and script (`pnpm`/`tsx` processes for this checkout), and confirm none remain with `ps`;
+    2. only then, the operator (Johan, or a lead-instructed worker with no other SecondLook process running) manually deletes `DATA_DIR/.owner.lock`;
+    3. start one process.
+
+    Startup recovery (below) then reconciles state. Running starters during manual recovery violates the precondition, so it is unsupported.
   - Tests and scripts use separate DATA_DIRs.
 - **Atomic commits:** the store keeps `state.json` (listings, photos, jobs, requests, ledger). Each commit:
   1. writes `state.json.tmp`;
@@ -832,7 +836,7 @@ Test layers:
 | F23 | Measurements compare panel: no network request contains buyer comparison values (RTL test spying on fetch) |
 | F24 | TTL sweep: a buyer session (enabled under a test disposition) is past 60 min → files gone from disk, media 404, the receipt lists the sha256s and the vendor statement and source URL |
 | F25 | **Crash recovery** (test-only failpoints `YOUCAM_FAILPOINT=<name>` honoured only under NODE_ENV=test; the server process is spawned and killed with SIGKILL against the contract mock): after-admission-before-upload → restart → `failed interrupted`, released, 0 POSTs; after-postSendStartedAt-before-response → `uncertain`, possibly_spent, **total POSTs across both lifetimes = 1**; after-response-before-taskId-commit → `uncertain` (taskId lost), no POST; after-taskId-commit, restarted **before** the original deadlines → GET-only resume → `succeeded`/spent with the same taskId; after-download-before-succeeded → resume completes without a new POST. In every case committed cu never decreases across the restart. |
-| F26 | Ownership: 20 trials of two starters spawned concurrently on one DATA_DIR → exactly one acquires and the other exits 3. A lock left by a SIGKILLed pid, an empty lock and a garbage lock → the starter **still exits 3** (no takeover). `data:unlock` with the wrong lockId, or with a live pid → refused. Two concurrent `data:unlock` runs with the right lockId → exactly one succeeds. |
+| F26 | Ownership: 20 trials of two starters spawned concurrently on one DATA_DIR → exactly one acquires and the other exits 3. A lock left by a SIGKILLed pid, an empty lock and a garbage lock → the starter **still exits 3** (no takeover, lock bytes unchanged). Clean shutdown removes the lock only when its lockId matches. A test that replaces the lock with a foreign lockId before shutdown → the foreign lock is left intact. |
 | F27 | Idempotency: the same `requestId` and body sent twice concurrently (`Promise.all`) → one set of jobs, one set of ledger entries, both responses identical. The same id with a different modelPhotoIds → 409 `request_id_conflict`, nothing written. |
 | F28 | Whole-batch admission: N=2 with room for only 1 → 409 `budget_exceeded`, **zero** jobs and ledger entries written (state.json byte-identical before and after). |
 | F29 | Balance estimate: preflight balance 10.00 units at T; entries totalling 8.00 units created after T (any of reserved/spent/possibly_spent); a request needing 4.00 → 409 `insufficient_balance_estimate`. Entries created before T are not double-subtracted. |
@@ -846,6 +850,7 @@ Test layers:
 | F37 | Balance fence: `reserved`/`possibly_spent` entries created **before** a refreshed preflight are still deducted. `spent` entries settled after `fenceSeq` are deducted; those settled at or before it are not. A preflight while an attempt is non-terminal → `preflight_busy` with zero requests. An admission during an in-progress preflight → 409 `preflight_in_progress`. An estimate that covers need but not need + one-task margin → `insufficient_balance_estimate`. |
 | F38 | Recovery after deadline: crash while polling, restart after `attemptDeadlineAt` (or `batchDeadlineAt`) → `timed_out`/`possibly_spent` and the mock records **zero** requests after restart. Restart before the deadline → only GET/download requests, the last one sent before the original deadline, and none after. |
 | F39 | Missing artifact: delete the result file of a `succeeded` attempt and restart → the state is still `succeeded`, the ledger is `spent`, zero requests at startup. An explicit artifact recovery → ≤1 GET + ≤1 download, attempt state and ledger byte-identical. Past 24 h → 409 `artifact_recovery_expired`, zero requests. A 4th recovery → 409 `artifact_recovery_limit`. Two concurrent recoveries → the second 409 `artifact_recovery_busy`. |
+| F40 | Lock-mutation inventory (static + runtime): a test scans `src/` and `scripts/` and finds that `.owner.lock` is referenced only in `store.ts`'s acquire (`"wx"`) and owner-shutdown functions, with no `rename`/`rm`/`unlink`/`writeFile` on it elsewhere. No `data:unlock` (or similar) script exists in `package.json`. At runtime, with fs spied, a full fixture lifecycle performs exactly one create and at most one self-verified unlink on the lock path. |
 
 ---
 
@@ -868,7 +873,6 @@ Run in the slot worktree. **Grant** = needs a unique, exact, reviewed master gra
 | Browser: **first inspect, no install.** `node -e "console.log(require('./node_modules/playwright-core/browsers.json'))"` gives the required chromium revision. Then list existing caches read-only (`ls ~/Library/Caches/ms-playwright $W/cache/*/ms-playwright`). If a matching `chromium-<rev>` (and `chromium_headless_shell-<rev>`) exists, set `PLAYWRIGHT_BROWSERS_PATH` to that directory. Only if none matches, request a grant for `PLAYWRIGHT_BROWSERS_PATH=$W/cache/youcam/ms-playwright pnpm exec playwright install chromium`. | inspect: no; install: **grant** | |
 | `pnpm e2e` (`playwright test`, 1 worker) / `pnpm screenshots` | **grant** | |
 | `pnpm check:env` (presence only) / `pnpm licenses` | no | |
-| `pnpm data:unlock --lock-id <id>` | no grant, but only on explicit lead/Johan instruction after confirming no SecondLook process runs | §5.9 |
 | `pnpm youcam:preflight` (live, 0 units) | **grant** + gate L1 | |
 | `pnpm youcam:probe …` / any live task | **grant** + exact unit count approved by the master (L2–L4) | |
 
@@ -950,11 +954,13 @@ No brand logos, copyrighted music or third-party people appear in the footage (R
 
 Slot1 worktree: `git -C $W/projects/youcam worktree add $W/projects/youcam-wt/slot1 -b codex/slot1-integrator`. Slot1 commits on its branch. The lead reviews each stage (diff + targeted tests). Slot1 then fast-forward-merges into `main` (only slot1 merges). Commit trailer: `Co-Authored-By: GPT-6.1 Sol <noreply@openai.com>`. Each stage ends with a report: commands run with exit codes, test counts, deviations, open questions.
 
+Target dates are planning targets, not waits: a stage starts as soon as the previous one is accepted, and its grants are available.
+
 | Stage | Target date (SGT) | Scope | Acceptance (lead review) | Heavy grants |
 |---|---|---|---|---|
 | **S0 scaffold** | 20 Oct | package.json with exact pins, lockfile, tsconfig strict, configs, `.gitignore`, `.env.example`, `types.ts`+`schemas.ts` (§4 complete), `copy.ts` skeleton with all keys, `banned-phrases.ts` + F14 test, `env.ts` + F16 exit test, `synth.ts` + `gen-fixtures`, README skeleton, `docs/licenses.*` | typecheck clean; targeted pure tests pass; lockfile committed; no deps beyond §12 | **G-install** (`pnpm install`); **G-img-0** (`pnpm fixtures:generate` twice + `pnpm test:img tests/img/synth.test.ts`) |
 | **S1 domain** | 21–22 Oct | measurements (F18, A4), capabilities (F1), quality metrics/gate/thresholds + calibration doc (F2, F3), normalize/raster (F17), job-machine (I1–I6 property tests), ledger (F9 pure part), listing rules (F13 pure part), errors (F21) | pure tests green in targeted runs; calibration expectations hold **without threshold edits** | **G-img-1** (`pnpm test:img` for quality/normalize/calibration files, listed exactly in the request) |
-| **S2 adapter + server** | 23–24 Oct | rate-limiter (F20), redact, http-client + contract mock (F10, F15, F22), fixture client (all scenarios), runner (F4–F8, F19), preflight, store (atomic writes, ledger replay), routes incl. the buyer 403 gate (F12) and TTL sweeper (F24), disclose (F13 pixel) | server, contract, crash and policy tests green (F4–F12, F15, F19–F22, F25–F39); canary test zero hits | **G-int-1** (`pnpm test:int` listed files), then **G-suite-1** (`pnpm test`) |
+| **S2 adapter + server** | 23–24 Oct | rate-limiter (F20), redact, http-client + contract mock (F10, F15, F22), fixture client (all scenarios), runner (F4–F8, F19), preflight, store (atomic writes, ledger replay), routes incl. the buyer 403 gate (F12) and TTL sweeper (F24), disclose (F13 pixel) | server, contract, crash and policy tests green (F4–F12, F15, F19–F22, F25–F40); canary test zero hits | **G-int-1** (`pnpm test:int` listed files), then **G-suite-1** (`pnpm test`) |
 | **S3 UI** | 25–27 Oct | SellerWizard, QualityReport, DeclarationForm, MeasurementsForm, CompareMeasurements (F23), ModelPicker, CostConfirmDialog, JobProgress, Gallery/ListingPage (original-first), BuyerTryOn (disabled explainer + full flow behind the gate), UnitsPanel, ModeBanner, all §6 states | RTL tests; lead exercises the fixture app | **G-dev-1** (`pnpm dev:fixture` for a bounded review session, owner named) after the read-only browser-cache inspection |
 | **S4 live tooling + E2E + screenshots** | 28–29 Oct | `youcam-preflight`, `youcam-probe`, `probes/input-matrix-v1.json` (§16), manifest schema + enforcement (F11), e2e specs (seller happy path, gate fail, lower-body block, cost confirm, uncertain path, buyer disabled), `pnpm screenshots` (fixture) | e2e green; screenshots show the DEMO banner | **G-e2e**, **G-build** |
 | **S5 docs/hardening** | 30–31 Oct | README (install/run/test/live setup without secrets, PC-1 summary, fixture vs live), `docs/test-report.md`, `docs/live-evidence.md` (if any), fixes from lead review | full gate green on the frozen SHA | **G-suite-final**, **G-build-final** |
