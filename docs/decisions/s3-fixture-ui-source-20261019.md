@@ -15,3 +15,5 @@ Pending before S3 acceptance: independent full source review; narrow source/type
 Partial S2 source gates remain: durable result publication/settlement atomicity, admission/capacity boundary, independent download deadline, complete periodic/buyer-reference cleanup, retry/artifact recovery and full live transport/recovery coverage. The UI does not fill these by changing server code. PC-1 is disabled; it does not render an enabled personal-photo deletion promise. No real person consent, rights entry, live pricing or units access was supplied.
 
 Source draft only; no main integration, source-project export/bundle/publication, reservation mutation, conversation copy or submission.
+
+Static copy follow-up before independent review: fixture job phase names identify the fixture adapter, never a real YouCam send. Gallery captions and copied fixture listing text use the demo/not-a-YouCam-result disclosure, replacing the live-only provider attribution in the generic listing template without changing that frozen domain function. This follow-up was not executed.

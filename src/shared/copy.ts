@@ -133,6 +133,7 @@ export const UI_COPY = {
   units: 'Units & request ledger', simulated: 'SIMULATED · cost 0', budget: 'Budget left', committed: 'Committed', balance: 'Balance estimate', notAvailable: 'Not available',
   ledgerEmpty: 'No ledger entries yet.', attempt: 'Attempt', state: 'State', cu: 'Units', reason: 'Reason',
   progress: 'Job progress', job: 'Job', refreshJobs: 'Refresh known jobs', retryDisabled: 'Retry admission is not enabled in this source checkpoint. No automatic task retry will be sent.',
+  fixtureSteps: ['Preparing sample photos', 'Sent to fixture adapter', 'Creating demo placeholder', 'Retaining demo media', 'Done'], fixtureError: 'Simulated error guidance:',
   recoveryDisabled: 'Artifact recovery is not enabled in this source checkpoint.',
   gallery: 'Listing gallery', originalFirst: 'The original garment photo is always shown first. Demo previews are additional images, never the cover.',
   missingImage: 'Media unavailable. Do not assume the file was recovered.', fixturePreview: 'Demo placeholder, not a YouCam result',
