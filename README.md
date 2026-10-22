@@ -1,20 +1,68 @@
 # SecondLook
 
-A private scaffold for a thrift-listing workflow: original garment photos, flat measurements and labelled approximate AI try-on previews. Buyer photo uploads are disabled under PC-1.
+**Honest AI try-on previews for one-of-a-kind secondhand listings, built on the YouCam AI Clothes API.**
 
-Implementation status: dependencies installed with scripts disabled under a closed master grant. Typecheck and 21 tests in the error, job-machine and ledger unit files passed. Other pure tests, synthetic fixture rendering and application runtime checks remain pending. Live integration is planned and unverified. This is not a final contest pass.
+Thrift and resale sellers usually have one hanger photo of a single-unit item and no model shots. Buyers can't picture the piece worn, and many resale items can't be exchanged for another size. SecondLook is a local seller studio that turns that one photo into a listing with:
 
-S1 image source candidate adds pure pixel metrics and area averaging, bounded JPEG normalization, and synthetic calibration contracts. A first targeted run passed 12 new numeric/policy tests. After a calibration metadata correction, 13 tests reported passes and the typecheck exited 0, but process supervision stopped with an audit requirement; these are qualified results, not final governed acceptance. Native image rendering, EXIF checks and measured calibration are still unrun. See [calibration scope](docs/calibration.md).
+- the **original photo always first** (the only allowed cover image);
+- **flat measurements** in cm or inches instead of size claims;
+- an **AI try-on preview from YouCam**, clearly labelled *approximate*, with the disclosure burned into the image pixels;
+- a **photo quality gate** that checks the garment photo against YouCam's documented input rules *before any unit is spent*;
+- an **explicit unit cost review**: live cost and balance are read from YouCam first, and nothing is generated until the seller confirms the exact number of units.
 
-## Fixture-mode quick start (after granted installation and implementation)
+## YouCam APIs used
 
-Use Node ≥24 and pnpm 12.11.2. Installation, fixture rendering and a dev session each require their own workflow grant. Once granted, use `pnpm install --frozen-lockfile --ignore-scripts`, `pnpm fixtures:generate`, and `pnpm dev:fixture`. The UI lands in S3; the current scaffold provides only `/api/health` on 127.0.0.1:5194. Vite uses 127.0.0.1:5195.
+| API | Endpoint | Used for |
+|---|---|---|
+| AI Clothes virtual try-on v4 | `POST /s2s/v2.0/task/cloth-v4`, `GET /s2s/v2.0/task/cloth-v4/{task_id}` | Async try-on task, polled with a deadline |
+| File API | `POST /s2s/v2.0/file` + presigned `PUT` | Uploading the garment and model photos |
+| Unit system | `GET /s2s/v2.0/credit/feature-cost`, `GET /s2s/v1.0/client/credit` | 0-unit preflight: exact cloth-v4 cost and account balance before spending |
 
-Fixture banner: DEMO MODE: sample data. Try-on images here are placeholders, not YouCam results.
+Every documented error code is mapped to seller guidance (`src/domain/errors.ts`). Requests are rate-limited under the documented 250 requests / 300 s, follow no redirects, and only reach the documented API and media hosts (`src/youcam/net-policy.ts`).
 
-Status labels, used only when supported by evidence: `local fixture verified` / `live integration implemented but unverified` / `live integration verified` / `final release gate`. Fixture outputs carry `DEMO FIXTURE · NOT A YOUCAM RESULT`. Live mode never silently falls back to fixtures.
+## Quick start (demo mode, no API key needed)
 
-## PC-1 summary
+Requirements: Node ≥ 24 and pnpm 12.11.2 (`corepack enable` provides it).
+
+```bash
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm dev:fixture
+# open http://127.0.0.1:5195
+```
+
+Demo mode uses synthetic sample images and a local fixture adapter. It shows the banner *"DEMO MODE: sample data. Try-on images here are placeholders, not YouCam results."* and every placeholder is watermarked **DEMO FIXTURE · NOT A YOUCAM RESULT**. Demo mode never contacts YouCam and spends nothing.
+
+Try it: upload `assets/demo/jacket.png`, declare *hanger photo · upper body* and tick the photo declarations, run the quality check, add a title and measurements, save, pick the synthetic mannequin and confirm the 0-unit demo request.
+
+## Live mode (real YouCam AI Clothes try-on)
+
+Live mode uses **your own** YouCam API key and units. Live mode never falls back to demo data.
+
+1. Create a free YouCam API account at <https://yce.perfectcorp.com/ai-api>, create an API key, and check your unit balance in the API console.
+2. Configure `.env` (never commit it):
+   ```bash
+   cp .env.example .env && chmod 600 .env
+   # YOUCAM_MODE=live
+   # YOUCAM_API_KEY=<your key>
+   # YOUCAM_UNIT_BUDGET=20      # hard cap on units this app may commit (default 120, max 400)
+   ```
+   Live data is kept in `./data-live` (separate from demo data in `./data`).
+3. Add a consented model photo. Person photos are only accepted from a local **rights manifest** (`data-live/rights/manifest.json`, format in `docs/rights-manifest.example.json`). An entry is used only if the subject is an adult who consented to AI processing and was told about YouCam's 30-day retention, and the file's SHA-256 matches. Buyers cannot upload photos in this build (see Privacy).
+4. Check cost and balance without spending anything:
+   ```bash
+   pnpm youcam:preflight   # GET feature-cost + GET credit only; creates no task, spends 0 units
+   ```
+5. `pnpm dev`, open <http://127.0.0.1:5195>, press **Check YouCam cost & balance (0 units)**, build the listing, pick the consented model and review the exact unit total before confirming.
+
+## Honesty rules the product enforces
+
+- The original photo comes first; generated images can never become the cover.
+- Generated images carry *"AI-generated preview from YouCam · approximate"* in the pixels and in the UI.
+- No fit, size or "exact colour" claims; a copy lint (`src/shared/banned-phrases.ts`) blocks them in the UI text.
+- No invented statistics, users or testimonials.
+- If a request's outcome is unknown (e.g. the connection drops while starting a task), the UI locks writes, says units may have been charged, and never retries automatically.
+
+## Privacy
 
 Try it on yourself is turned off in this build. We haven't enabled personal photo uploads yet, because SecondLook can't control how long the AI provider keeps them:
 
@@ -22,12 +70,29 @@ SecondLook deletes its own copies of your photo and the try-on result when you t
 
 YouCam (Perfect Corp.), which makes the try-on image, keeps its own copy. Its documentation says uploaded and generated images are stored for 30 days and then removed automatically, and its terms say it generally keeps data for 30 days and may keep information longer where the law requires. SecondLook has no way to delete YouCam's copy sooner.
 
-Enabling buyer upload requires the recorded master disposition and Johan's approval of the frozen copy; an environment variable alone does not enable it. Live person photos require a rights-manifest entry with informed consent. No consent is recorded on Johan's behalf.
+Decision record: [PC-1](docs/decisions/PC-1-buyer-photo-retention.md).
 
-## Validation and grants
+## Tests
 
-After G-install completes, `pnpm typecheck` and `pnpm test:pure <up to 3 files>` are free targeted checks. Image/integration tests, a full test run, build, browser and live calls require recorded grants. No live call has occurred. See [the binding plan](docs/implementation-plan.md) and [PC-1](docs/decisions/PC-1-buyer-photo-retention.md).
+```bash
+pnpm typecheck
+pnpm test          # pure unit/property + image + integration suites
+pnpm screenshots   # Playwright drive of the demo flow; writes docs/screenshots/fixture/
+pnpm build
+```
 
-## Dependencies
+Integration tests run each file against a fresh temporary data directory. No test contacts YouCam; live-path tests use an in-process fake transport that serves the documented response shapes.
 
-Pinned versions are in package.json. Both preserved lockfile documents are inventoried in docs/licenses.json; licence metadata for packages absent from the installed tree remains pending. sharp is Apache-2.0; its bundled dynamically linked libvips is LGPL-3.0-or-later. See docs/licenses.md. Project licence: MIT, Johan (Jo2234), 2026.
+## Architecture
+
+- `src/web` — React seller studio (Vite, `127.0.0.1:5195`).
+- `src/server` — Hono API (`127.0.0.1:5194`): single-owner durable store, try-on runner, routes.
+- `src/youcam` — HTTPS transport with host/DNS policy, typed API client, rate limiter, preflight cost binding, demo fixture client.
+- `src/domain` — pure logic: quality gate, capability matrix, job state machine, units ledger (reserve → spent / released / possibly spent).
+- `src/images` — bounded decoding/normalisation (sharp) and disclosure overlays.
+
+Design and contract: [docs/implementation-plan.md](docs/implementation-plan.md). Official API/rules snapshots with SHA-256: `docs/sources/`.
+
+## Licence
+
+MIT © 2026 Johan (Jo2234). Dependency licences: [docs/licenses.md](docs/licenses.md) (sharp is Apache-2.0; its bundled libvips is LGPL-3.0-or-later).
