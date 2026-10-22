@@ -17,8 +17,8 @@ function productSources(): ProductCopySource[] {
 test('F14/F36 every implemented product copy source passes; final artifacts remain pending', () => {
   expect(scanProductCopy(productSources(), COPY.retention)).toEqual([]);
   expect(productSources().some(s => s.id === 'README.md')).toBe(true);
-  expect(pendingDocuments).toEqual(['docs/submission-draft.md', 'docs/demo-script.md']);
-  // UI strings/rendered states and the two missing documents are not a completed final F36 gate.
+  // All three product documents now exist and are scanned; rendered UI states are covered by e2e.
+  expect(pendingDocuments).toEqual([]);
 });
 test('F36 mutation of each implemented source is detected, including every product document', () => {
   const sources = productSources();
