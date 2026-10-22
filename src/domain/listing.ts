@@ -1,6 +1,6 @@
-import type { GeneratedImage, Listing, ListingReadiness, QualityReport } from '../shared/types.js';
+import type { GeneratedImage, Listing, ListingReadiness, MeasurementField, QualityReport } from '../shared/types.js';
 import { measurementProblems } from '../shared/measurements.js';
-import { COPY } from '../shared/copy.js';
+import { COPY, UI_COPY } from '../shared/copy.js';
 export function readiness(listing: Listing, reports: Readonly<Record<string, QualityReport | undefined>>, generatedIds: ReadonlySet<string> = new Set()): ListingReadiness {
   const missing: string[] = [];
   if (!listing.title.trim()) missing.push('title');
@@ -17,6 +17,6 @@ export function galleryOrder(listing: Pick<Listing, 'garmentPhotoIds' | 'tryOnRe
 }
 export function listingText(listing: Listing): string {
   return [listing.title, listing.measurements?.tagSize ? COPY.listing.tagSize.replace('{size}', listing.measurements.tagSize) : '',
-    listing.measurements ? Object.entries(listing.measurements.valuesMm).map(([field, mm]) => `${field}: ${mm === 'na' ? 'N/A' : `${(mm ?? 0) / 10} cm`}`).join('\n') : '',
+    listing.measurements ? Object.entries(listing.measurements.valuesMm).map(([field, mm]) => `${UI_COPY.fields[field as MeasurementField]}: ${mm === 'na' ? 'N/A' : `${(mm ?? 0) / 10} cm`}`).join('\n') : '',
     listing.conditionNotes, listing.tryOnResultIds.length ? COPY.listing.disclosure : ''].filter(Boolean).join('\n\n');
 }

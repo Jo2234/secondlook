@@ -51,7 +51,7 @@ test('F36 frozen retention text hashes match plan paragraphs', () => {
 
 test('live and fixture studio copy passes the product claim lint', () => {
   expect(findBannedPhrases(strings(UI_COPY).join('\n'))).toEqual([]);
-  expect(UI_COPY.fixtureOnly).toBe('This seller studio supports the fixture server only. Live generation is not enabled.');
+  expect(UI_COPY.fixtureOnly).toBe('This seller studio is in demo mode. Results are placeholders, not YouCam results. Live generation is not enabled.');
   expect(UI_COPY.liveBanner).toContain('spends real YouCam units');
   expect(UI_COPY.checkLive).toBe('Check YouCam cost & balance (0 units)');
   expect(UI_COPY.liveUnknown).toContain('Units may have been spent');
