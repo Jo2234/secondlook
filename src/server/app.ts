@@ -59,7 +59,7 @@ export function createApp(env: AppEnv, services?: Services, fixtureUi?: FixtureU
     await next();
   });
   app.get('/api/health', c => c.json({ mode: env.mode, version: '0.0.0', thresholdsVersion: THRESHOLDS_VERSION, buyerUpload: 'disabled', preflight: services?.store.snapshot().preflight ?? null, capabilities: [...BASE_CAPABILITIES] } satisfies HealthResponse));
-  app.get('/', c => c.html(`<!doctype html><html lang="en"><meta charset="utf-8"><title>SecondLook</title><body><p role="status">${env.mode === 'fixture' ? COPY.mode.fixture : COPY.mode.live}</p><p>Fixture API source checkpoint. Seller UI is pending.</p></body></html>`));
+  app.get('/', c => c.html(`<!doctype html><html lang="en"><meta charset="utf-8"><title>SecondLook</title><body><p role="status">${env.mode === 'fixture' ? COPY.mode.fixture : COPY.mode.live}</p><p>SecondLook API server. Open the Vite UI at http://127.0.0.1:5195.</p></body></html>`));
   if (services) fixtureRoutes(app, env, services);
   // Disabled core applies even to health-only construction and every future enabled disposition.
   for (const path of ['/api/buyer-sessions', '/api/buyer-sessions/:id/photo', '/api/buyer-sessions/:id/tryon']) app.post(path, c => c.json({ mode: env.mode, error: 'buyer_upload_disabled' }, 403));

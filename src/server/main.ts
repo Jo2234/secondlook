@@ -3,8 +3,7 @@ import { StoreLocked } from './store.js';
 import { createFixtureSession } from './fixture-session.js';
 import { SHUTDOWN_MS } from '../youcam/limits.js';
 async function main(): Promise<void> {
-  const env = loadEnv(); // Live refusal remains before Store acquisition; no fixture fallback.
-  if (env.mode === 'live') throw new EnvError('Live execution is not ready; no fixture fallback');
+  const env = loadEnv();
   let deadline: ReturnType<typeof setTimeout> | undefined;
   const signals = ['SIGINT', 'SIGTERM'] as const;
   const session = createFixtureSession(env, {

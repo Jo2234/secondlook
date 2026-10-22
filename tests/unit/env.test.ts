@@ -15,3 +15,9 @@ test('F12 enabled without a disposition stays disabled', () => {
 test('budget, deadline, ports and API host enforce frozen bounds', () => {
   for (const raw of [{ YOUCAM_UNIT_BUDGET: '401' }, { YOUCAM_TASK_DEADLINE_MS: '59999' }, { PORT: '0' }, { YOUCAM_BASE_URL: 'https://evil.example' }, { YOUCAM_BASE_URL: 'http://127.0.0.1:5194', NODE_ENV: 'test', YOUCAM_TEST_LOOPBACK: '1' }]) expect(() => parseEnv(raw)).toThrow(EnvError);
 });
+
+test('live uses a separate default data directory', () => {
+  expect(parseEnv({ YOUCAM_MODE: 'live', YOUCAM_API_KEY: 'test-only' }).dataDir).toBe('./data-live');
+  expect(parseEnv({}).dataDir).toBe('./data');
+  expect(parseEnv({ YOUCAM_MODE: 'live', YOUCAM_API_KEY: 'test-only', DATA_DIR: './chosen' }).dataDir).toBe('./chosen');
+});

@@ -1,7 +1,12 @@
+import { collectPreflight } from '../../youcam/preflight-run.js';
+import { YouCamError } from '../../youcam/client.js';
+import type { YouCamClient } from '../../youcam/client.js';
+import type { PreflightRecord } from '../../shared/types.js';
+import type { EligibleRights } from '../rights.js';
 import type { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { createAttempt, isTerminal, step } from '../../domain/job-machine.js';
-import { admit, balanceEstimateCu, committedCu } from '../../domain/ledger.js';
+import { admit, balanceEstimateCu, committedCu, beginObservation } from '../../domain/ledger.js';
 import { capability, capabilityAllows } from '../../domain/capabilities.js';
 import { readiness, validateOriginalIds } from '../../domain/listing.js';
 import { evaluateGarmentPhoto } from '../../domain/quality/gate.js';
@@ -21,7 +26,7 @@ export class RouteError extends Error {
   readonly status: 400 | 403 | 404 | 409 | 422 | 503 | 507;
   constructor(code: string, status: RouteError['status'] = 409) { super(code); this.status = status; }
 }
-export interface Services { store: Store; runner: Runner; signal: AbortSignal }
+export interface Services { store: Store; runner: Runner; signal: AbortSignal; rights?: EligibleRights; preflightClient?: () => YouCamClient }
 export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void {
   const { store, runner } = services;
   const now = () => new Date().toISOString();
@@ -31,7 +36,6 @@ export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void 
   };
   // Register before the sweeping middleware: resolving an admission is a read-only operation.
   app.get('/api/tryon-requests/:requestId', c => {
-    if (env.mode !== 'fixture') throw new RouteError('live_execution_not_ready', 503);
     const parsed = TryOnRequestSchema.shape.requestId.safeParse(c.req.param('requestId'));
     if (!parsed.success) throw new RouteError('invalid_request', 400);
     // A failed/unknown commit must never expose the previous memory snapshot as settled truth.
@@ -54,9 +58,9 @@ export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void 
     if (services.signal.aborted && !['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) throw new RouteError('runner_closed', 503);
     await sweepExpired(store, Date.now()); await next();
   });
-  app.get('/api/models', c => c.json({ mode: env.mode, models: store.snapshot().photos.filter(p => p.role === 'model' && p.source === 'synthetic').map(p => ({ photoId: p.id, label: 'DEMO synthetic mannequin', rightsId: p.rightsId, source: p.source, synthetic: true })) }));
+  const liveModel = (p: StoredPhoto) => p.role === 'model' && p.mode === 'live' && p.source === 'rights_manifest' && p.rightsId !== null && services.rights?.get(p.rightsId)?.sha256 === p.original.sha256;
+  app.get('/api/models', c => c.json({ mode: env.mode, models: store.snapshot().photos.filter(p => env.mode === 'fixture' ? p.role === 'model' && p.source === 'synthetic' : liveModel(p)).map(p => ({ photoId: p.id, label: env.mode === 'fixture' ? 'DEMO synthetic mannequin' : services.rights!.get(p.rightsId!)!.displayLabel, rightsId: p.rightsId, source: p.source, synthetic: env.mode === 'fixture' })) }));
   app.post('/api/photos', async c => {
-    if (env.mode !== 'fixture') throw new RouteError('live_execution_not_ready', 503);
     const body = await c.req.parseBody();
     if (body.role !== 'garment' || !(body.file instanceof File)) throw new RouteError('invalid_request', 400);
     const { photo } = await analyzePhoto(new Uint8Array(await body.file.arrayBuffer()));
@@ -95,13 +99,32 @@ export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void 
       }); return c.json(listingResponse(next.listings.find(l => l.id === listingId)!));
     });
   }
-  app.get('/api/units', c => {
+  const units = () => {
     const state = store.snapshot(), committed = committedCu(state.ledger);
-    return c.json({ mode: env.mode, preflight: state.preflight, budgetCu: env.budgetCu, ledger: state.ledger, committedCu: committed, remainingBudgetCu: env.budgetCu - committed, balanceEstimateCu: state.preflight ? balanceEstimateCu(state.preflight, state.ledger) : null });
+    return { mode: env.mode, preflight: state.preflight, budgetCu: env.budgetCu, ledger: state.ledger, committedCu: committed, remainingBudgetCu: env.budgetCu - committed, balanceEstimateCu: state.preflight ? balanceEstimateCu(state.preflight, state.ledger) : null };
+  };
+  app.get('/api/units', c => c.json(units()));
+  app.post('/api/units/preflight', async c => {
+    if (env.mode === 'fixture') return c.json({ mode: env.mode, error: 'fixture_no_live_preflight' }, 409);
+    let fenceSeq = 0;
+    await store.commit(state => {
+      const observation = beginObservation(state.seq, state.ledger, state.jobs.filter(j => !isTerminal(j.attempts.at(-1)!)).length, state.observing);
+      if (!observation.ok) throw new RouteError(observation.error);
+      fenceSeq = observation.fenceSeq; state.observing = true; return state;
+    });
+    let record: PreflightRecord | undefined;
+    try {
+      if (!services.preflightClient) throw new YouCamError('policy');
+      record = await collectPreflight({ client: services.preflightClient(), signal: services.signal, fenceSeq, baseUrl: env.baseUrl });
+    } catch (error) {
+      if (error instanceof YouCamError) return c.json({ mode: env.mode, error: 'preflight_failed', reason: error.http === 401 || error.http === 403 ? 'auth' : error.kind }, 502);
+      throw error;
+    } finally {
+      await store.commit(state => { state.observing = false; if (record) state.preflight = record; return state; });
+    }
+    return c.json(units());
   });
-  app.post('/api/units/preflight', c => c.json({ mode: env.mode, error: env.mode === 'fixture' ? 'fixture_no_live_preflight' : 'live_execution_not_ready' }, 409));
   app.post('/api/listings/:id/tryon', async c => {
-    if (env.mode !== 'fixture') throw new RouteError('live_execution_not_ready', 503);
     const listingId = id(c.req.param('id')), parsed = TryOnRequestSchema.safeParse(await c.req.json());
     if (!parsed.success) throw new RouteError('invalid_request', 400);
     store.assertWritable();
@@ -129,14 +152,14 @@ export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void 
         if (replay) return state;
         // Recheck after store serialization: a failure/shutdown may have fenced the reservation.
         runner.assertAdmissionOpen();
-        const listing = state.listings.find(l => l.id === listingId), photo = state.photos.find(p => p.id === parsed.data.garmentPhotoId && p.role === 'garment');
+        const listing = state.listings.find(l => l.id === listingId), photo = state.photos.find(p => p.id === parsed.data.garmentPhotoId && p.role === 'garment' && p.mode === env.mode);
         if (!listing || !photo || !listing.garmentPhotoIds.includes(photo.id) || !listing.declaration) throw new RouteError('quality_failed');
         if (!capabilityAllows(capability(listing.declaration.photoType, listing.declaration.category), env.mode)) throw new RouteError('capability_blocked');
         const quality = state.qualities.find(q => q.photoId === photo.id);
         const d = listing.declaration;
         if (!d.singleGarment || !d.frontFacing || !d.notComposite || !d.fullyVisible || !d.noPeopleInPhoto && d.photoType !== 'worn') throw new RouteError('quality_failed');
         if (!quality?.spendAllowed || quality.capability?.photoType !== listing.declaration.photoType || quality.capability?.category !== listing.declaration.category) throw new RouteError('quality_failed');
-        if (parsed.data.modelPhotoIds.some(modelId => !state.photos.some(p => p.id === modelId && p.role === 'model' && p.source === 'synthetic'))) throw new RouteError('rights_missing');
+        if (parsed.data.modelPhotoIds.some(modelId => !state.photos.some(p => p.id === modelId && (env.mode === 'fixture' ? p.role === 'model' && p.source === 'synthetic' : liveModel(p))))) throw new RouteError('rights_missing');
         state.ledger = [...admission.state.entries]; state.requests = [...admission.state.requests];
         allocations.forEach((allocation, index) => {
           const category = listing.declaration!.category;
