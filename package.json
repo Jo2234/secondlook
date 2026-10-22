@@ -21,7 +21,7 @@
     "screenshots": "node scripts/not-implemented.mjs S4",
     "fixtures:generate": "tsx scripts/gen-fixtures.ts",
     "check:env": "node --env-file-if-exists=.env --import tsx scripts/check-env.ts",
-    "youcam:preflight": "node scripts/not-implemented.mjs S2",
+    "youcam:preflight": "node --env-file-if-exists=.env --import tsx scripts/youcam-preflight.ts",
     "youcam:probe": "node scripts/not-implemented.mjs S4",
     "licenses": "node scripts/licenses.mjs"
   },

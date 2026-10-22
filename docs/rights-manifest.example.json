@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "entries": [{
+    "rightsId": "example-replace",
+    "kind": "person_self_consent",
+    "displayLabel": "Example — replace",
+    "subjectIsAdult": false,
+    "aiProcessingConsent": false,
+    "vendorRetentionDisclosed": false,
+    "scopes": [],
+    "repoDistribution": "local-only",
+    "noProminentThirdPartyMarks": false,
+    "licenceUrl": null,
+    "consentRecordedAt": "1970-01-01T00:00:00.000Z",
+    "file": "replace.png",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "notes": "Placeholder only. Record actual rights and consent before use."
+  }]
+}

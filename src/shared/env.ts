@@ -1,7 +1,7 @@
 import type { Mode } from './types.js';
 import { DEFAULT_BUDGET_UNITS, MAX_BUDGET_UNITS, DEFAULT_TASK_DEADLINE_MS, MIN_TASK_DEADLINE_MS, MAX_TASK_DEADLINE_MS } from '../youcam/limits.js';
 export class EnvError extends Error { constructor(message: string, public readonly exitCode = 2) { super(message); } }
-export interface AppEnv { mode: Mode; apiKey: string | null; baseUrl: string; budgetCu: number; taskDeadlineMs: number; buyerUpload: 'disabled' | 'enabled'; buyerUploadRefused: boolean; dataDir: string; port: number; vitePort: number }
+export interface AppEnv { mode: Mode; apiKey: string | null; baseUrl: string; budgetCu: number; taskDeadlineMs: number; buyerUpload: 'disabled' | 'enabled'; buyerUploadRefused: boolean; dataDir: string; rightsManifest?: string; port: number; vitePort: number }
 function integer(value: string | undefined, fallback: number, min: number, max: number, name: string): number {
   if (!value) return fallback;
   const n = Number(value);
@@ -25,5 +25,5 @@ export function parseEnv(raw: Readonly<Record<string, string | undefined>>, disp
   return { mode, apiKey, baseUrl: u.origin, budgetCu: integer(raw.YOUCAM_UNIT_BUDGET, DEFAULT_BUDGET_UNITS, 0, MAX_BUDGET_UNITS, 'YOUCAM_UNIT_BUDGET') * 100,
     taskDeadlineMs: integer(raw.YOUCAM_TASK_DEADLINE_MS, DEFAULT_TASK_DEADLINE_MS, MIN_TASK_DEADLINE_MS, MAX_TASK_DEADLINE_MS, 'YOUCAM_TASK_DEADLINE_MS'),
     buyerUpload: buyer === 'enabled' && dispositioned ? 'enabled' : 'disabled', buyerUploadRefused: buyer === 'enabled' && !dispositioned,
-    dataDir: raw.DATA_DIR || './data', port: integer(raw.PORT, 5194, 1, 65535, 'PORT'), vitePort: integer(raw.VITE_PORT, 5195, 1, 65535, 'VITE_PORT') };
+    dataDir: raw.DATA_DIR || (mode === 'live' ? './data-live' : './data'), rightsManifest: raw.YOUCAM_RIGHTS_MANIFEST || undefined, port: integer(raw.PORT, 5194, 1, 65535, 'PORT'), vitePort: integer(raw.VITE_PORT, 5195, 1, 65535, 'VITE_PORT') };
 }

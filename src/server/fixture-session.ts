@@ -1,3 +1,8 @@
+import { createHttpClient } from '../youcam/http-client.js';
+import { createHttpsTransport } from '../youcam/transport.js';
+import type { Transport } from '../youcam/transport.js';
+import { loadRightsManifest, seedRightsModels } from './rights.js';
+import type { EligibleRights } from './rights.js';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { EnvError } from './env.js';
@@ -27,6 +32,8 @@ export interface OwnedFetchPolicy {
 }
 export interface FixtureSessionOptions {
   fixtureUi?: FixtureUiAssets;
+  /** Test-only upstream injection; production owns one HTTPS transport. */
+  liveTransport?: Transport;
   /** Exactly the existing synthetic model input, never a route/client/Store override. */
   modelFront?: Uint8Array;
   checkpoint?: { requests: 32 | 128; sockets: 8 };
@@ -43,12 +50,14 @@ export function createFixtureSession(inputEnv: AppEnv, options: FixtureSessionOp
   const env = { ...inputEnv };
   options = { ...options, ...(options.checkpoint ? { checkpoint: { ...options.checkpoint } } : {}),
     ...(options.checkpointStore ? { checkpointStore: captureCheckpointStorePolicy(options.checkpointStore) } : {}) };
-  if (env.mode === 'live') throw new EnvError('Live execution is not ready; no fixture fallback');
+  if (env.mode === 'live' && (options.checkpoint || options.checkpointStore || options.createFetchPolicy || options.modelFront || options.fixtureUi)) throw new EnvError('Fixture options require fixture mode');
+  if (env.mode === 'live' && !env.apiKey) throw new EnvError('YOUCAM_MODE=live but YOUCAM_API_KEY is not set');
   if (options.checkpoint && (env.port !== 5194 || env.vitePort !== 5194 || env.buyerUpload !== 'disabled' || env.budgetCu !== 0 || env.apiKey !== null)) throw new EnvError('Invalid private fixture checkpoint');
   if (options.checkpoint && (![32, 128].includes(options.checkpoint.requests) || options.checkpoint.sockets !== 8)) throw new EnvError('Invalid private fixture limits');
   if ((options.checkpointStore || options.createFetchPolicy) && (env.mode !== 'fixture' || options.checkpoint?.requests !== 32 || options.checkpoint.sockets !== 8)) throw new EnvError('Invalid owned checkpoint');
   if (env.buyerUploadRefused || env.buyerUpload === 'enabled') console.error('Buyer upload disabled: this source checkpoint implements the disabled core only');
   const shutdown = new AbortController();
+  const transport = env.mode === 'live' ? options.liveTransport ?? createHttpsTransport() : undefined;
   // Copy bounded optional input before startup; default CLI still reads the real existing asset.
   let modelFront: Uint8Array | undefined;
   if (options.modelFront) {
@@ -89,7 +98,7 @@ export function createFixtureSession(inputEnv: AppEnv, options: FixtureSessionOp
       for (const result of retainedResults) if (result.status === 'rejected') retainedFaults.push(result.reason);
       if (retainedFaults.length) throw new Error('fixture_retained_join_UNKNOWN');
     },
-    dispose: () => { limiter?.dispose(); },
+    dispose: () => { try { limiter?.dispose(); } finally { transport?.close(); } },
     closeStore: async () => {
       if (native && !native.status().released) throw new Error('native_release_unproved');
       if (!policyJoined || !ioJoined || retainedFaults.length) throw new Error('fixture_retained_join_unproved');
@@ -98,6 +107,7 @@ export function createFixtureSession(inputEnv: AppEnv, options: FixtureSessionOp
     clearDeadline: options.clearDeadline, removeSignals: () => { options.removeSignals?.(); },
   });
   const startup: Promise<void> = Promise.resolve().then(async () => {
+    const manifest = env.mode === 'live' ? await loadRightsManifest(env) : undefined;
     // Capture the real Store immediately on acquire fulfillment, before any fallible initializer.
     const acquired = await Store.acquire(env.dataDir, io); store = acquired;
     const activeLimiter = new SlidingLogLimiter(systemClock); limiter = activeLimiter;
@@ -114,12 +124,13 @@ export function createFixtureSession(inputEnv: AppEnv, options: FixtureSessionOp
       for (const image of store.snapshot().images) {
         await recoverStoreArtifact(store, image, await store.readMediaOutcome(image.disclosedPath));
       }
-      if (!store.snapshot().photos.some(p => p.source === 'synthetic' && p.role === 'model')) {
+      const rights: EligibleRights = manifest ? await seedRightsModels(store, manifest) : new Map();
+      if (env.mode === 'fixture' && !store.snapshot().photos.some(p => p.source === 'synthetic' && p.role === 'model')) {
         const input = modelFront ?? await readFile('assets/demo/model-front.png'), { photo } = await analyzePhoto(input), photoId = newId(), path = `photos/${photoId}.jpg`;
         const stored: StoredPhoto = { id: photoId, role: 'model', mode: 'fixture', source: 'synthetic', rightsId: null, original: photo.original, normalized: { ...photo.normalized, path }, createdAt: new Date().toISOString(), expiresAt: null };
         await store.writeMedia(path, photo.data); await store.commit(state => { state.photos.push(stored); return state; });
       }
-      const rawScenarios: unknown = JSON.parse(options.checkpointStore
+      const rawScenarios: unknown = env.mode === 'live' ? {} : JSON.parse(options.checkpointStore
         ? await io.readFixtureScenarios() : await readFile('fixtures/scenarios.json', 'utf8'));
       if (!rawScenarios || typeof rawScenarios !== 'object' || Array.isArray(rawScenarios)) throw new Error('invalid_fixture_scenarios');
       const scenarios: Record<string, FixtureScenario> = {};
@@ -128,13 +139,13 @@ export function createFixtureSession(inputEnv: AppEnv, options: FixtureSessionOp
         scenarios[prefix] = scenario as FixtureScenario;
       }
       runner = new Runner({ store, limiter, signal: shutdown.signal, taskDeadlineMs: env.taskDeadlineMs,
-        client: job => new FixtureClient({ scenario: scenarioForHash(store.snapshot().photos.find(p => p.id === job.garmentPhotoId)!.original.sha256, scenarios), now: systemClock.now, result: async signal => {
+        client: job => env.mode === 'live' ? createHttpClient({ apiKey: env.apiKey!, baseUrl: env.baseUrl, transport: transport!, grant: signal => limiter.acquire(signal), clock: systemClock }) : new FixtureClient({ scenario: scenarioForHash(store.snapshot().photos.find(p => p.id === job.garmentPhotoId)!.original.sha256, scenarios), now: systemClock.now, result: async signal => {
           const state = store.snapshot(), model = state.photos.find(p => p.id === job.modelPhotoId)!, garment = state.photos.find(p => p.id === job.garmentPhotoId)!;
           return fixtureComposite(await store.readMedia(model.normalized.path), await store.readMedia(garment.normalized.path), signal);
         } }),
         disclose: async (bytes, job, signal) => {
-          const result = await discloseImage(bytes, 'fixture', signal), imageId = newId();
-          return { ...result, id: imageId, listingId: job.listingId, buyerSessionId: job.buyerSessionId, jobId: job.id, mode: 'fixture', disclosedPath: `generated/${imageId}.jpg`, label: 'demo_fixture', artifactMissing: false, createdAt: new Date().toISOString(), expiresAt: null };
+          const result = await discloseImage(bytes, env.mode, signal), imageId = newId();
+          return { ...result, id: imageId, listingId: job.listingId, buyerSessionId: job.buyerSessionId, jobId: job.id, mode: env.mode, disclosedPath: `generated/${imageId}.jpg`, label: env.mode === 'live' ? 'ai_tryon_approximate' : 'demo_fixture', artifactMissing: false, createdAt: new Date().toISOString(), expiresAt: null };
         },
       });
       if (shutdown.signal.aborted) runner.stopAdmission();
@@ -144,7 +155,7 @@ export function createFixtureSession(inputEnv: AppEnv, options: FixtureSessionOp
         await runner.resume(id);
       }
       if (!shutdown.signal.aborted) {
-        const app = createApp(env, { store, runner, signal: shutdown.signal }, options.fixtureUi);
+        const app = createApp(env, { store, runner, signal: shutdown.signal, rights, ...(transport ? { preflightClient: () => createHttpClient({ apiKey: env.apiKey!, baseUrl: env.baseUrl, transport, grant: signal => limiter.acquire(signal), clock: systemClock }) } : {}) }, options.fixtureUi);
         if (options.createFetchPolicy) {
           policyAttempted = true;
           policy = options.createFetchPolicy(request => Promise.resolve(app.fetch(request)));
