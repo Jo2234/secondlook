@@ -1,6 +1,6 @@
 // DRAFT ONLY — R30 does not authorize importing or executing this file.
 import { describe, expect, it } from 'vitest';
-import { correlatedJobs, definitiveFixtureRefusal, FixtureAdmission, fixtureBody, fixtureReady, inspectedJobs, observedFixtureRefusal, sameJobIdentity } from '../../src/web/fixture-admission.js';
+import { admissionReady, admissionBody, correlatedJobs, definitiveFixtureRefusal, FixtureAdmission, fixtureBody, fixtureReady, inspectedJobs, observedFixtureRefusal, sameJobIdentity } from '../../src/web/fixture-admission.js';
 import type { FixtureInputs, FixtureReview } from '../../src/web/fixture-admission.js';
 import type { JobsResponse, TryOnJob } from '../../src/shared/types.js';
 
@@ -116,5 +116,74 @@ describe('fixture admission controller — 30 draft cases, no React/network/prov
     expect(c.canReview(i)).toBe(false); expect(c.coversLedger(v.jobs.map(j => j.id))).toBe(true); expect(new FixtureAdmission().coversLedger(v.jobs.map(j => j.id))).toBe(false);
     expect(inspectedJobs(v, UUID)?.jobs.length).toBe(2); expect(inspectedJobs(v, OTHER_UUID)).toBeNull();
     const changed = { ...v.jobs[0]!, modelPhotoId: id(99) }; expect(sameJobIdentity(v.jobs[0]!, changed)).toBe(false);
+  });
+});
+
+function liveInputs(): FixtureInputs {
+  const i = inputs(); i.health!.mode = 'live'; i.listing!.mode = 'live';
+  i.models = i.models.map(m => ({ ...m, synthetic: false, source: 'rights_manifest', rightsId: 'consent-1' }));
+  i.units = { mode: 'live', preflight: { at: new Date().toISOString(), baseUrl: 'https://example.invalid', fenceSeq: 0,
+    featureCost: { matched: [], status: 'ok', costPerTaskCu: 125 }, balanceCu: 1000, ok: true, problems: [] },
+    budgetCu: 1000, committedCu: 0, remainingBudgetCu: 1000, balanceEstimateCu: 1000, ledger: [] };
+  return i;
+}
+describe('live admission uses reviewed cost, rights and current mode', () => {
+  it('admits fresh consented models and sends cost times count', () => {
+    const i = liveInputs(), c = new FixtureAdmission(); expect(admissionReady(i, 'live', i.units)).toBe(true);
+    const r = c.open(i, UUID); expect(admissionBody(r).confirmCostCu).toBe(250);
+    expect(c.claim(r, i)).toBe(true); expect(c.startPost(r, i)?.confirmCostCu).toBe(250);
+  });
+  it.each(['missing', 'stale', 'boundary', 'future', 'status', 'not_ok', 'synthetic', 'source', 'rights', 'budget', 'balance', 'health', 'listing', 'units', 'negative', 'fractional', 'null'] as const)('rejects %s', reason => {
+    const i = liveInputs(), u = i.units!, p = u.preflight!;
+    if (reason === 'missing') u.preflight = null;
+    if (reason === 'stale') p.at = new Date(Date.now() - 31 * 60000).toISOString();
+    if (reason === 'boundary') p.at = new Date(Date.now() - 30 * 60000).toISOString();
+    if (reason === 'future') p.at = new Date(Date.now() + 60000).toISOString();
+    if (reason === 'status') p.featureCost.status = 'cost_unknown';
+    if (reason === 'not_ok') p.ok = false;
+    if (reason === 'synthetic') i.models[0]!.synthetic = true;
+    if (reason === 'source') i.models[0]!.source = 'seller_upload';
+    if (reason === 'rights') i.models[0]!.rightsId = null;
+    if (reason === 'budget') u.remainingBudgetCu = 249;
+    if (reason === 'balance') u.balanceEstimateCu = 374;
+    if (reason === 'health') i.health!.mode = 'fixture';
+    if (reason === 'listing') i.listing!.mode = 'fixture';
+    if (reason === 'units') u.mode = 'fixture';
+    if (reason === 'negative') p.featureCost.costPerTaskCu = -1;
+    if (reason === 'fractional') p.featureCost.costPerTaskCu = 1.5;
+    if (reason === 'null') p.featureCost.costPerTaskCu = null;
+    expect(admissionReady(i, 'live', u)).toBe(false);
+  });
+  it('requires one task of balance headroom but permits the boundary', () => {
+    const i = liveInputs(); i.units!.remainingBudgetCu = 250; i.units!.balanceEstimateCu = 375;
+    expect(admissionReady(i)).toBe(true);
+  });
+  it('invalidates review on a preflight or units change before POST', () => {
+    const i = liveInputs(), c = new FixtureAdmission(), r = c.open(i, UUID);
+    expect(c.claim(r, i)).toBe(true); i.units!.remainingBudgetCu -= 1;
+    expect(c.startPost(r, i)).toBeNull(); expect(c.snapshot().phase).toBe('refused');
+    const next = c.open(i, OTHER_UUID); i.units!.preflight!.featureCost.costPerTaskCu = 100;
+    expect(c.claim(next, i)).toBe(false);
+  });
+  it('retains unknown live ownership and reconciles only live jobs', () => {
+    const i = liveInputs(), c = new FixtureAdmission(), r = c.open(i, UUID);
+    c.claim(r, i); c.startPost(r, i); c.fail(r, null, 'lost'); expect(c.blocksMutations()).toBe(true);
+    const v = envelope(r); v.mode = 'live'; v.jobs.forEach(j => { j.mode = 'live'; });
+    expect(c.found(r, v)?.length).toBe(2); expect(c.snapshot().phase).toBe('accepted');
+  });
+  it('rejects mixed modes for correlation and inspection in both directions', () => {
+    const r = new FixtureAdmission().open(inputs(), UUID), v = envelope(r);
+    expect(correlatedJobs(v, r, undefined, 'live')).toBeNull();
+    v.mode = 'live'; expect(correlatedJobs(v, r, undefined, 'live')).toBeNull();
+    expect(inspectedJobs(v, UUID, 'live')).toBeNull();
+    v.jobs.forEach(j => { j.mode = 'live'; });
+    expect(correlatedJobs(v, r, undefined, 'live')?.jobs.length).toBe(2);
+    expect(inspectedJobs(v, UUID, 'live')?.jobs.length).toBe(2);
+    expect(correlatedJobs(v, r, undefined, 'fixture')).toBeNull();
+    v.mode = 'fixture'; expect(correlatedJobs(v, r)).toBeNull(); expect(inspectedJobs(v, UUID)).toBeNull();
+  });
+  it('preserves zero fixture body and every fixture quality gate in live', () => {
+    const f = inputs(), r = new FixtureAdmission().open(f, UUID); expect(admissionBody(r).confirmCostCu).toBe(0);
+    const i = liveInputs(); i.quality!.checks[0]!.severity = 'fail'; expect(admissionReady(i)).toBe(false);
   });
 });

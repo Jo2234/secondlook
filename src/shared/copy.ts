@@ -104,6 +104,23 @@ export const RETENTION_SHA256 = {
 
 // Additive fixture-console copy; frozen disclosure/retention strings above are unchanged.
 export const UI_COPY = {
+  liveBanner: 'YouCam AI Clothes try-on. Generating a preview spends real YouCam units from your account.',
+  liveIntro: 'Build a listing from the original photo, measured details and clearly labelled AI try-on previews.',
+  liveNote: 'Live YouCam generation is enabled. Review the unit cost before sending a request.',
+  liveStep: '03 / AI try-on preview', liveModels: 'Choose one or two consenting models', consented: 'Consented model photo',
+  liveGenerate: 'Review live request', liveCostTitle: 'Confirm live YouCam request',
+  liveAdmission: 'Generating sends garment and model photos to YouCam (Perfect Corp.) and spends real account units. Each listing can be admitted once in this page session.',
+  liveUnknown: 'Units may have been spent. Keep the original request ID and reconcile before considering any further action. A missing request or failed lookup does not prove that nothing was admitted; writes stay locked.',
+  liveSteps: ['Uploading photos to YouCam', 'Task submitted', 'YouCam generating (polling)', 'Downloading result', 'Done'],
+  liveError: 'YouCam guidance:', livePreview: 'AI try-on preview from YouCam · approximate',
+  liveOriginalFirst: 'The original garment photo is always shown first. AI try-on previews are additional images, never the cover.',
+  liveCopyData: 'Listing text uses saved facts only; AI try-on previews do not establish fit, colour or garment details.',
+  liveBalance: 'Estimated balance after reservations', liveBudget: 'Local budget remaining',
+  preflight: 'YouCam cost & balance check', preflightNone: 'None yet', preflightOk: 'OK', preflightProblem: 'Problem',
+  costPerTask: 'Cost per try-on', totalCost: 'Total units that will be spent', tryOnCount: 'Number of try-ons',
+  preflightBalance: 'YouCam balance at check', checkedAt: 'Checked at', preflightAge: 'Check age (minutes)',
+  checkLive: 'Check YouCam cost & balance (0 units)', checkLiveNote: 'This check reads cost and balance and spends 0 units.',
+  spend: 'Spend', andGenerate: 'units and generate',
   brand: 'SecondLook', studio: 'Seller studio', eyebrow: 'A clearer second look',
   heading: 'Show the garment. Keep the facts.', intro: 'Build a listing from the original photo, measured details and clearly labelled demo previews.',
   listings: 'Your listings', add: 'New listing', refresh: 'Refresh server state', connecting: 'Connecting to the local fixture server…',
