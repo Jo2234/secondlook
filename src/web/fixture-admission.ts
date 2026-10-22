@@ -1,15 +1,16 @@
 import { HealthResponseSchema, InvalidRequestResponseSchema, JobsResponseSchema, ListingResponseSchema, ModelsResponseSchema, QualityReportSchema, TryOnRequestSchema } from '../shared/schemas.js';
-import type { GarmentDeclaration, HealthResponse, JobsResponse, ListingResponse, ModelOption, QualityReport, TryOnJob, TryOnRequest } from '../shared/types.js';
+import type { GarmentDeclaration, HealthResponse, JobsResponse, ListingResponse, ModelOption, QualityReport, TryOnJob, TryOnRequest, Mode, UnitsResponse } from '../shared/types.js';
 
 export interface FixtureInputs {
   health: HealthResponse | null; listing: ListingResponse | null; photoId: string | null;
   declaration: GarmentDeclaration; quality: QualityReport | null;
-  models: ModelOption[]; modelIds: string[]; dirty: boolean;
+  models: ModelOption[]; modelIds: string[]; dirty: boolean; units?: UnitsResponse | null;
 }
 export type FixtureReview = Readonly<{
   listingId: string; savedAt: string; title: string; photoId: string;
   modelIds: readonly string[]; declaration: Readonly<GarmentDeclaration>;
-  declarationKey: string; requestId: string;
+  declarationKey: string; requestId: string; mode?: Mode; unitsKey?: string;
+  costPerTaskCu?: number; balanceCu?: number | null; preflightAt?: string;
 }>;
 export const declarationKey = (d: GarmentDeclaration | null): string => d === null ? '' : JSON.stringify([
   d.photoType, d.category, d.singleGarment, d.frontFacing, d.notComposite, d.fullyVisible, d.noPeopleInPhoto,
@@ -31,8 +32,33 @@ export function fixtureReady(i: FixtureInputs): boolean {
     && i.modelIds.length >= 1 && i.modelIds.length <= 2 && new Set(i.modelIds).size === i.modelIds.length
     && i.modelIds.every(id => i.models.filter(m => m.photoId === id && m.synthetic && m.source === 'synthetic').length === 1);
 }
+export const unitsKey = (u: UnitsResponse | null | undefined): string => JSON.stringify(u ?? null);
+export function admissionReady(i: FixtureInputs, mode: Mode = i.health?.mode ?? 'fixture', units = i.units): boolean {
+  if (mode === 'fixture') return fixtureReady(i);
+  const p = units?.preflight, cost = p?.featureCost.costPerTaskCu;
+  const age = p ? Date.now() - Date.parse(p.at) : NaN;
+  if (i.health?.mode !== mode || i.listing?.mode !== mode || units?.mode !== mode
+    || !p?.ok || p.featureCost.status !== 'ok' || !Number.isSafeInteger(cost) || cost === null || cost === undefined || cost < 0
+    || !Number.isFinite(age) || age < 0 || age >= 30 * 60 * 1000
+    || !ModelsResponseSchema.safeParse({ mode, models: i.models }).success
+    || !i.modelIds.every(id => i.models.filter(m => m.photoId === id && m.source === 'rights_manifest' && !m.synthetic && Boolean(m.rightsId)).length === 1)) return false;
+  const need = cost * i.modelIds.length;
+  if (!Number.isSafeInteger(need) || !Number.isSafeInteger(units.remainingBudgetCu) || units.remainingBudgetCu < need
+    || units.balanceEstimateCu === null || !Number.isSafeInteger(units.balanceEstimateCu) || units.balanceEstimateCu - need < cost) return false;
+  // Reuse every fixture quality/saved-input condition with provenance already checked above.
+  return fixtureReady({ ...i, health: { ...i.health, mode: 'fixture' }, listing: { ...i.listing, mode: 'fixture' },
+    models: i.models.map(m => ({ ...m, source: 'synthetic', synthetic: true })) });
+}
+export function admissionBody(r: FixtureReview): TryOnRequest {
+  if ((r.mode ?? 'fixture') === 'fixture') return fixtureBody(r);
+  const cost = r.costPerTaskCu;
+  if (!Number.isSafeInteger(cost) || cost === undefined || cost < 0) throw new Error('live_request_invalid');
+  const body = { ...fixtureBody(r), confirmCostCu: cost * r.modelIds.length };
+  if (!TryOnRequestSchema.strict().safeParse(body).success) throw new Error('live_request_invalid');
+  return body;
+}
 export function reviewMatches(r: FixtureReview, i: FixtureInputs): boolean {
-  return fixtureReady(i) && i.listing?.id === r.listingId && i.listing.updatedAt === r.savedAt
+  return admissionReady(i, r.mode ?? 'fixture') && (r.mode !== 'live' || r.unitsKey === unitsKey(i.units)) && i.listing?.id === r.listingId && i.listing.updatedAt === r.savedAt
     && i.photoId === r.photoId && declarationKey(i.declaration) === r.declarationKey
     && i.modelIds.length === r.modelIds.length && i.modelIds.every((id, n) => id === r.modelIds[n]);
 }
@@ -42,22 +68,22 @@ export function fixtureBody(r: FixtureReview): TryOnRequest {
   return body;
 }
 /** The lookup has the same {mode,jobs} envelope as admission. Array order is part of identity. */
-export function correlatedJobs(value: unknown, r: FixtureReview, knownIds?: readonly string[]): JobsResponse | null {
+export function correlatedJobs(value: unknown, r: FixtureReview, knownIds?: readonly string[], mode: Mode = r.mode ?? 'fixture'): JobsResponse | null {
   const parsed = JobsResponseSchema.strict().safeParse(value);
-  if (!parsed.success || parsed.data.mode !== 'fixture') return null;
+  if (!parsed.success || parsed.data.mode !== mode) return null;
   const { jobs } = parsed.data;
   if (jobs.length !== r.modelIds.length || new Set(jobs.map(j => j.id)).size !== jobs.length
     || knownIds && (knownIds.length !== jobs.length || jobs.some((j, n) => j.id !== knownIds[n]))
-    || jobs.some((j, n) => j.mode !== 'fixture' || j.requestId !== r.requestId || j.listingId !== r.listingId
+    || jobs.some((j, n) => j.mode !== mode || j.requestId !== r.requestId || j.listingId !== r.listingId
       || j.buyerSessionId !== null || j.garmentPhotoId !== r.photoId || j.modelPhotoId !== r.modelIds[n]
       || j.category !== r.declaration.category || j.request.garment_category !== r.declaration.category)) return null;
   return parsed.data;
 }
-export function inspectedJobs(value: unknown, requestId: string): JobsResponse | null {
+export function inspectedJobs(value: unknown, requestId: string, mode: Mode = 'fixture'): JobsResponse | null {
   const p = JobsResponseSchema.strict().safeParse(value);
-  if (!TryOnRequestSchema.shape.requestId.safeParse(requestId).success || !p.success || p.data.mode !== 'fixture'
+  if (!TryOnRequestSchema.shape.requestId.safeParse(requestId).success || !p.success || p.data.mode !== mode
     || p.data.jobs.length < 1 || p.data.jobs.length > 2 || new Set(p.data.jobs.map(j => j.id)).size !== p.data.jobs.length
-    || p.data.jobs.some(j => j.mode !== 'fixture' || j.requestId !== requestId || j.buyerSessionId !== null || j.listingId === null)) return null;
+    || p.data.jobs.some(j => j.mode !== mode || j.requestId !== requestId || j.buyerSessionId !== null || j.listingId === null)) return null;
   return p.data;
 }
 // Only observed, exact pre-effect refusal envelopes qualify. A conflict can refer to existing
@@ -65,16 +91,16 @@ export function inspectedJobs(value: unknown, requestId: string): JobsResponse |
 export function definitiveFixtureRefusal(status: number | null, code: string): boolean {
   return status === 400 && code === 'invalid_request' || status === 403 && code === 'origin_refused'
     || status === 413 && code === 'body_too_large'
-    || status === 409 && ['quality_failed', 'capability_blocked', 'rights_missing', 'cost_mismatch', 'budget_exceeded', 'insufficient_balance_estimate', 'preflight_in_progress'].includes(code);
+    || status === 409 && ['quality_failed', 'capability_blocked', 'rights_missing', 'cost_mismatch', 'budget_exceeded', 'insufficient_balance_estimate', 'preflight_in_progress', 'preflight_stale'].includes(code);
 }
-export function observedFixtureRefusal(value: unknown, status: number): boolean {
+export function observedFixtureRefusal(value: unknown, status: number, mode: Mode = 'fixture'): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
-  return v.mode === 'fixture' && typeof v.error === 'string' && definitiveFixtureRefusal(status, v.error)
+  return v.mode === mode && typeof v.error === 'string' && definitiveFixtureRefusal(status, v.error)
     && (Object.keys(v).length === 2 || v.error === 'invalid_request' && InvalidRequestResponseSchema.strict().safeParse(v).success);
 }
 export function sameJobIdentity(a: TryOnJob, b: TryOnJob): boolean {
-  return a.id === b.id && a.mode === 'fixture' && b.mode === 'fixture' && a.requestId === b.requestId
+  return a.id === b.id && a.mode === b.mode && a.requestId === b.requestId
     && a.listingId === b.listingId && a.buyerSessionId === b.buyerSessionId && a.buyerSessionId === null
     && a.garmentPhotoId === b.garmentPhotoId && a.modelPhotoId === b.modelPhotoId && a.category === b.category
     && a.request.garment_category === b.request.garment_category && a.request.change_shoes === b.request.change_shoes
@@ -93,14 +119,14 @@ export class FixtureAdmission {
   coversLedger(jobIds: readonly string[]): boolean { return jobIds.every(id => this.sessionJobIds.has(id)); }
   canReview(i: FixtureInputs): boolean {
     return !this.blocksMutations() && this.phase !== 'review' && !i.listing?.tryOnResultIds.length
-      && !this.admittedListings.has(i.listing?.id ?? '') && fixtureReady(i);
+      && !this.admittedListings.has(i.listing?.id ?? '') && admissionReady(i);
   }
   open(i: FixtureInputs, requestId: string): FixtureReview {
     if (!this.canReview(i)) throw new Error('fixture_review_unavailable');
     const r: FixtureReview = Object.freeze({ listingId: i.listing!.id, savedAt: i.listing!.updatedAt, title: i.listing!.title,
       photoId: i.photoId!, modelIds: Object.freeze([...i.modelIds]), declaration: Object.freeze({ ...i.declaration }),
-      declarationKey: declarationKey(i.declaration), requestId });
-    fixtureBody(r); this.review = r; this.jobIds = undefined; this.phase = 'review'; return r;
+      declarationKey: declarationKey(i.declaration), requestId, ...(i.health?.mode === 'live' ? { mode: 'live' as const, unitsKey: unitsKey(i.units), costPerTaskCu: i.units!.preflight!.featureCost.costPerTaskCu!, balanceCu: i.units!.preflight!.balanceCu, preflightAt: i.units!.preflight!.at } : {}) });
+    admissionBody(r); this.review = r; this.jobIds = undefined; this.phase = 'review'; return r;
   }
   close(r: FixtureReview): void { if (this.review === r && this.phase === 'review') this.phase = 'idle'; }
   claim(r: FixtureReview, i: FixtureInputs): boolean {
@@ -111,7 +137,7 @@ export class FixtureAdmission {
   startPost(r: FixtureReview, current: FixtureInputs): TryOnRequest | null {
     if (this.review !== r || this.phase !== 'checking') return null;
     if (!reviewMatches(r, current)) { this.phase = 'refused'; return null; }
-    this.phase = 'posting'; return fixtureBody(r);
+    this.phase = 'posting'; return admissionBody(r);
   }
   fail(r: FixtureReview, status: number | null, code: string): void {
     if (this.review !== r) return;

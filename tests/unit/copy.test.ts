@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
-import { COPY, RETENTION_SHA256 } from '../../src/shared/copy.js';
+import { COPY, UI_COPY, RETENTION_SHA256 } from '../../src/shared/copy.js';
 import { findBannedPhrases, scanProductCopy, type ProductCopySource } from '../../src/shared/banned-phrases.js';
 function strings(x: unknown): string[] { return typeof x === 'string' ? [x] : x && typeof x === 'object' ? Object.values(x).flatMap(strings) : []; }
 // Only product documents are scanned: source snapshots and review history stay intact.
@@ -47,4 +47,12 @@ test('F36 frozen retention text hashes match plan paragraphs', () => {
     expect(COPY.retention[key]).toBe(frozen);
     expect(createHash('sha256').update(COPY.retention[key]).digest('hex')).toBe(RETENTION_SHA256[key]);
   }
+});
+
+test('live and fixture studio copy passes the product claim lint', () => {
+  expect(findBannedPhrases(strings(UI_COPY).join('\n'))).toEqual([]);
+  expect(UI_COPY.fixtureOnly).toBe('This seller studio supports the fixture server only. Live generation is not enabled.');
+  expect(UI_COPY.liveBanner).toContain('spends real YouCam units');
+  expect(UI_COPY.checkLive).toBe('Check YouCam cost & balance (0 units)');
+  expect(UI_COPY.liveUnknown).toContain('Units may have been spent');
 });
