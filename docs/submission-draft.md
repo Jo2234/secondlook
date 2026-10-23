@@ -1,6 +1,6 @@
 # SecondLook: Devpost submission draft
 
-Status: final copy. Live facts come from the verified run on 23 Oct 2026; the repository and video links are published.
+Status: submitted to the YouCam API Skin AI & eCommerce VTO Hackathon on 23 Oct 2026 (https://devpost.com/software/secondlook-glas18). Live facts come from the verified run on 23 Oct 2026; the repository and video links are published.
 
 ## Project name
 
