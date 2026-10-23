@@ -9,9 +9,12 @@ import { DOWNLOAD_TIMEOUT_MS, FILE_POST_TIMEOUT_MS, GET_TIMEOUT_MS, JSON_MAX_BYT
 import type { Clock } from './operations.js';
 import { systemClock } from './operations.js';
 const text = z.string().min(1).max(4096);
-const slotSchema = z.object({ files: z.array(z.object({ file_id: text, requests: z.array(z.object({ method: z.literal('PUT'), url: text, headers: z.record(z.string(), z.union([z.string(), z.number()])) })).length(1) })).length(1) });
+const slots = z.array(z.object({ file_id: text, requests: z.array(z.object({ method: z.literal('PUT'), url: text, headers: z.record(z.string(), z.union([z.string(), z.number()])) })).length(1) })).length(1);
+// The AI Clothes guide shows `{ status, data: { files } }`; the File API reference page shows top-level `files`. Accept exactly one of them.
+const slotSchema = z.union([z.object({ data: z.object({ files: slots }) }).transform(v => v.data), z.object({ files: slots })]);
 const taskSchema = z.object({ data: z.object({ task_id: text }) });
-const pollSchema = z.object({ data: z.object({ task_status: z.enum(['running', 'success', 'error']), error: z.string().nullable(), error_message: z.string().nullable(), results: z.object({ url: text }).nullable() }) });
+// The documented success sample omits error_message, so absent and null are treated alike.
+const pollSchema = z.object({ data: z.object({ task_status: z.enum(['running', 'success', 'error']), error: z.string().nullish(), error_message: z.string().nullish(), results: z.object({ url: text }).nullish() }) });
 const skuSchema = z.object({ description: z.string(), amount: z.number(), unit: z.string(), proc_unit: z.number(), run_task_url: z.string() });
 const costSchema = z.object({ result: z.object({ skus: z.array(skuSchema).max(PREFLIGHT_PAGE_SIZE), next_token: text.nullable() }) });
 const creditSchema = z.object({ results: z.array(z.object({ type: z.enum(['ApiSubsToken', 'ApiPaygToken']), amount_dec: z.number().finite().min(0).max(1_000_000), expiry: z.number().finite() })).max(10_000) });
@@ -59,7 +62,7 @@ export function createHttpClient(options: { apiKey: string; baseUrl: string; tra
     async createClothTask(body: ClothBody, call) { return { taskId: (await json(CLOTH_V4_PATH, taskSchema, call, body)).data.task_id }; },
     async getClothTask(id, call) {
       const { data } = await json(`${CLOTH_V4_PATH}/${encodeURIComponent(id)}`, pollSchema, call);
-      return { status: data.task_status, engineError: data.error, errorMessage: null, resultUrl: data.results?.url ?? null };
+      return { status: data.task_status, engineError: data.error ?? null, errorMessage: null, resultUrl: data.results?.url ?? null };
     },
     async download(url, call) {
       const response = await send({ url, destination: 'media', method: 'GET', headers: {}, timeoutMs: DOWNLOAD_TIMEOUT_MS, maxBytes: RESULT_MAX_BYTES }, call);

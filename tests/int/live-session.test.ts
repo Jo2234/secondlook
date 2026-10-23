@@ -28,10 +28,11 @@ function fakeTransport(result: Uint8Array) {
     let body: unknown;
     if (path.includes('feature-cost')) body = { result: { skus: [{ description: 'Cloth v4', amount: 2, unit: 'result_image', proc_unit: 1, run_task_url: `${api}/s2s/v2.0/task/cloth-v4` }], next_token: null } };
     else if (path === '/s2s/v1.0/client/credit') body = { results: [{ type: 'ApiPaygToken', amount_dec: 100, expiry: Date.now() + 86400000 }] };
-    else if (path === '/s2s/v2.0/file') body = { files: [{ file_id: `file-${++slots}`, requests: [{ method: 'PUT', url: `${media}/upload-${slots}`, headers: { 'Content-Type': 'image/jpg' } }] }] };
+    // Shapes follow the AI Clothes guide samples ({ status, data }), which differ from the File API reference page.
+    else if (path === '/s2s/v2.0/file') body = { status: 200, data: { files: [{ file_id: `file-${++slots}`, requests: [{ method: 'PUT', url: `${media}/upload-${slots}`, headers: { 'Content-Type': 'image/jpg' } }] }] } };
     else if (request.method === 'PUT') body = {};
     else if (request.method === 'POST' && path === '/s2s/v2.0/task/cloth-v4') body = { data: { task_id: 'task-one' } };
-    else if (path === '/s2s/v2.0/task/cloth-v4/task-one') body = { data: { task_status: 'success', error: null, error_message: null, results: { url: `${media}/result.png` } } };
+    else if (path === '/s2s/v2.0/task/cloth-v4/task-one') body = { status: 200, data: { error: null, results: { url: `${media}/result.png` }, task_status: 'success' } };
     else if (path === '/result.png') return { status: 200, headers: { 'content-type': 'image/png' }, bytes: result };
     else throw new Error(`unexpected fake request: ${request.method} ${path}`);
     return { status: 200, headers: { 'content-type': 'application/json' }, bytes: Buffer.from(JSON.stringify(body)) };
