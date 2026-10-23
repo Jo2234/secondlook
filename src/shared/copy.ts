@@ -54,7 +54,7 @@ export const COPY = {
     "downloading": "Downloading",
     "done": "Done",
     "cancel": "Stops waiting; units may already be used.",
-    "timedOut": "YouCam didn't finish within {n} minutes. Units may have been used. Retry (uses units again) or try later.",
+    "timedOut": "YouCam didn't finish within {n} minutes. Units may have been used. Nothing is retried automatically; any new request needs a fresh unit cost review.",
     "uncertain": "We lost the connection while starting the job. YouCam may have charged units. We won't retry automatically.",
     "waiting": "Waiting for YouCam rate limit…",
     "missing": "Result file missing"
@@ -159,7 +159,7 @@ export const UI_COPY = {
   original: 'Original', modelCount: 'Models', request: 'Request ID',
   units: 'Units & request ledger', simulated: 'SIMULATED · cost 0', budget: 'Budget left', committed: 'Committed', balance: 'Balance estimate', notAvailable: 'Not available',
   ledgerEmpty: 'No ledger entries yet.', attempt: 'Attempt', state: 'State', cu: 'Units', reason: 'Reason',
-  progress: 'Job progress', job: 'Job', refreshJobs: 'Refresh known jobs', retryDisabled: 'Retrying a request is not available in this version. No automatic task retry will be sent.',
+  progress: 'Job progress', job: 'Job', refreshJobs: 'Refresh known jobs', retryDisabled: 'Retrying a request is not available in this version. Live requests send each photo upload and the try-on task once, with no automatic retry.',
   fixtureSteps: ['Preparing sample photos', 'Sent to demo service', 'Creating demo placeholder', 'Retaining demo media', 'Done'], fixtureError: 'Simulated error guidance:',
   recoveryDisabled: 'Recovering a missing result file isn\'t available in this version.',
   gallery: 'Listing gallery', originalFirst: 'The original garment photo is always shown first. Demo previews are additional images, never the cover.',

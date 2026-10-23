@@ -62,6 +62,7 @@ Live mode uses **your own** YouCam API key and units. Live mode never falls back
 - Generated images carry *"AI-generated preview from YouCam · approximate"* in the pixels and in the UI.
 - No fit, size or colour-matching claims; a copy lint (`src/shared/banned-phrases.ts`) blocks them in the UI text.
 - No invented statistics, users or testimonials.
+- Live mode sends each photo upload (one File API slot request and one upload per photo) and the try-on task request once. There is no automatic retry or upload-slot refresh; a failure stops the attempt and releases the reserved units if no task was created. Status polling continues normally while a task runs.
 - If a request's outcome is unknown (e.g. the connection drops while starting a task), the UI locks writes, says units may have been charged, and never retries automatically.
 
 ## Privacy

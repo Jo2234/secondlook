@@ -6,7 +6,7 @@ import type { YouCamClient } from '../youcam/client.js';
 import { YouCamError } from '../youcam/client.js';
 import { bounded, checkSignal, systemClock } from '../youcam/operations.js';
 import type { Clock } from '../youcam/operations.js';
-import { DOWNLOAD_PHASE_MS, DOWNLOAD_TIMEOUT_MS, FILE_POST_TIMEOUT_MS, GET_TIMEOUT_MS, MAX_SLOT_REFRESHES, MAX_UPLOAD_TRIES, PUT_TIMEOUT_MS, UPLOAD_PHASE_MS, attemptDeadlineMs } from '../youcam/limits.js';
+import { DOWNLOAD_PHASE_MS, DOWNLOAD_TIMEOUT_MS, FILE_POST_TIMEOUT_MS, GET_TIMEOUT_MS, PUT_TIMEOUT_MS, UPLOAD_PHASE_MS, attemptDeadlineMs, requestPolicy } from '../youcam/limits.js';
 import { markPostCommitment } from '../youcam/workflow-state.js';
 import type { WorkflowState } from '../youcam/workflow-state.js';
 import type { SlidingLogLimiter } from '../youcam/rate-limiter.js';
@@ -74,7 +74,7 @@ export class Runner {
     const applyEvent = (state: WorkflowState, job: TryOnJob, event: Event): Effect[] => {
       const a = job.attempts.at(-1)!;
       if (isTerminal(a)) return [];
-      const result = step(a, event, now(), { taskDeadlineMs: this.options.taskDeadlineMs, batchDeadlineAt: batch.deadlineAt });
+      const result = step(a, event, now(), { taskDeadlineMs: this.options.taskDeadlineMs, batchDeadlineAt: batch.deadlineAt, taskPosts: requestPolicy(job.mode).taskPosts });
       job.attempts[job.attempts.length - 1] = result.attempt; const effects = result.effects;
       if (event.type === 'limiter_granted' && event.request === 'task_post' && effects.some(e => e.type === 'request')) markPostCommitment(state, id, now());
       for (const effect of effects) if (effect.type === 'settle') {
@@ -124,21 +124,22 @@ export class Runner {
         const upload = async (photo: StoredPhoto, uploadSignal: AbortSignal): Promise<string> => {
           const bytes = await store.readMedia(photo.normalized.path); checkSignal(uploadSignal);
           if (createHash('sha256').update(bytes).digest('hex') !== photo.normalized.sha256) throw new YouCamError('parse');
+          const { uploadTries, slotRefreshes } = requestPolicy(current().mode);
           let refreshes = 0;
-          for (let slotNumber = 0; slotNumber <= MAX_SLOT_REFRESHES; slotNumber++) {
+          for (let slotNumber = 0; slotNumber <= slotRefreshes; slotNumber++) {
             let slot: Awaited<ReturnType<YouCamClient['createUpload']>> | undefined;
-            for (let n = 0; n < MAX_UPLOAD_TRIES; n++) {
+            for (let n = 0; n < uploadTries; n++) {
               try { slot = await uploadRequest('file_post', s => client.createUpload({ contentType: 'image/jpg', fileName: `${photo.id}.jpg`, fileSize: bytes.length }, { signal: s }), uploadSignal, FILE_POST_TIMEOUT_MS); break; }
-              catch (error) { store.assertWritable(); if (uploadSignal.aborted || !(error instanceof YouCamError) || n === MAX_UPLOAD_TRIES - 1 || error.kind === 'policy' || error.http === 401) throw error; await clock.sleep(1000 * 2 ** n, uploadSignal); }
+              catch (error) { store.assertWritable(); if (uploadSignal.aborted || !(error instanceof YouCamError) || n === uploadTries - 1 || error.kind === 'policy' || error.http === 401) throw error; await clock.sleep(1000 * 2 ** n, uploadSignal); }
             }
             if (!slot) throw new YouCamError('parse');
             let refresh = false;
-            for (let n = 0; n < MAX_UPLOAD_TRIES; n++) {
+            for (let n = 0; n < uploadTries; n++) {
               try { await uploadRequest('upload_put', s => client.putBytes(slot!.put, bytes, { signal: s }), uploadSignal, PUT_TIMEOUT_MS); return slot.fileId; }
               catch (error) {
                 store.assertWritable(); if (!(error instanceof YouCamError)) throw error;
-                if (error instanceof YouCamError && error.http === 403 && refreshes < MAX_SLOT_REFRESHES) { refreshes++; refresh = true; break; }
-                if (uploadSignal.aborted || n === MAX_UPLOAD_TRIES - 1 || error instanceof YouCamError && error.kind === 'policy') throw error;
+                if (error instanceof YouCamError && error.http === 403 && refreshes < slotRefreshes) { refreshes++; refresh = true; break; }
+                if (uploadSignal.aborted || n === uploadTries - 1 || error instanceof YouCamError && error.kind === 'policy') throw error;
                 await clock.sleep(1000 * 2 ** n, uploadSignal);
               }
             }

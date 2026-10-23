@@ -32,8 +32,9 @@ function requestState(a: TryOnAttempt): { phase: 'grant' | 'request'; kind: Requ
   return null;
 }
 const localError = (code: string, messageKey: UserError['messageKey'] = 'retry'): UserError => ({ code, upstream: null, retryable: 'user_confirm', messageKey });
-export function step(previous: TryOnAttempt, event: Event, now: IsoTime, options: { taskDeadlineMs?: number; batchDeadlineAt?: IsoTime; jitterFactor?: number } = {}): { attempt: TryOnAttempt; effects: Effect[] } {
+export function step(previous: TryOnAttempt, event: Event, now: IsoTime, options: { taskDeadlineMs?: number; batchDeadlineAt?: IsoTime; jitterFactor?: number; taskPosts?: number } = {}): { attempt: TryOnAttempt; effects: Effect[] } {
   const a: TryOnAttempt = { ...previous, history: [...previous.history] }, effects: Effect[] = [], time = Date.parse(now), taskMs = options.taskDeadlineMs ?? DEFAULT_TASK_DEADLINE_MS;
+  const taskPosts = Math.min(options.taskPosts ?? MAX_TASK_POSTS, MAX_TASK_POSTS);
   if (!Number.isFinite(time)) throw new Error('invalid_clock');
   const record = (reason: string, to = a.state): void => { a.history.push({ at: now, from: a.state, to, reason }); a.state = to; };
   const done = () => ({ attempt: a, effects });
@@ -75,7 +76,7 @@ export function step(previous: TryOnAttempt, event: Event, now: IsoTime, options
   if (event.type === 'request_upload' && a.state === 'uploading' && !active) { grant(event.request); return done(); }
   if (event.type === 'limiter_granted' && active?.phase === 'grant' && active.kind === event.request && time >= active.notBefore) {
     if (event.request === 'task_post') {
-      if (a.taskId || a.postCount >= MAX_TASK_POSTS || a.state !== 'submitting') return done();
+      if (a.taskId || a.postCount >= taskPosts || a.state !== 'submitting') return done();
       a.postCount++; a.postSendStartedAt ??= now;
     }
     if (event.request === 'task_get') { if (a.getCount >= maxTaskGets(taskMs)) { settle('timed_out', localError('deadline', 'later')); return done(); } a.getCount++; }
@@ -96,7 +97,7 @@ export function step(previous: TryOnAttempt, event: Event, now: IsoTime, options
     if (event.type === 'post_response') {
       finish('task_post');
       if (event.http === 429 || event.http === 401 || event.http === 400 && ['InvalidParameters', 'BadRequest', 'CreditInsufficiency', 'InvalidStyle', 'InvalidStyleGroup'].includes(event.errorCode ?? '')) record('post_rejected');
-      if (event.http === 429 && a.postCount < MAX_TASK_POSTS) { grant('task_post', time + 1000 * 2 ** (a.postCount - 1)); return done(); }
+      if (event.http === 429 && a.postCount < taskPosts) { grant('task_post', time + 1000 * 2 ** (a.postCount - 1)); return done(); }
       const definitive = event.http === 401 || event.http === 429 || event.http === 400 && ['InvalidParameters', 'BadRequest', 'CreditInsufficiency', 'InvalidStyle', 'InvalidStyleGroup'].includes(event.errorCode ?? '');
       settle(definitive ? 'failed' : 'uncertain', definitive ? mapError({ http: event.http, ...(event.errorCode ? { errorCode: event.errorCode } : {}) }) : localError('uncertain_charge'), definitive); return done();
     }

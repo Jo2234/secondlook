@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { createAttempt, retryAttempt, step, type Event } from '../../src/domain/job-machine.js';
 import type { TryOnAttempt } from '../../src/shared/types.js';
+import { LIVE_REQUEST_POLICY, requestPolicy } from '../../src/youcam/limits.js';
 const time = (ms: number) => new Date(Date.UTC(2026, 9, 19) + ms).toISOString();
 function submitted(): TryOnAttempt {
   let a = createAttempt(1, 'entry1');
@@ -22,6 +23,14 @@ test('F5 429 twice then task-created uses three POSTs; third 429 fails and relea
   expect(step(a, { type: 'task_created', taskId: 'task-one' }, time(6000)).attempt).toMatchObject({ state: 'polling', taskId: 'task-one', postCount: 3 });
   const failed = step(a, { type: 'post_response', http: 429 }, time(6000));
   expect(failed.attempt).toMatchObject({ state: 'failed', postCount: 3, error: { code: 'rate_limited' } }); expect(failed.effects).toContainEqual({ type: 'settle', state: 'released' });
+});
+test('live request policy: a 429 on the single cloth-task POST fails and releases without a second POST', () => {
+  const failed = step(submitted(), { type: 'post_response', http: 429 }, time(100), { taskPosts: LIVE_REQUEST_POLICY.taskPosts });
+  expect(failed.attempt).toMatchObject({ state: 'failed', postCount: 1, error: { code: 'rate_limited' } });
+  expect(failed.effects).toContainEqual({ type: 'settle', state: 'released' }); expect(failed.effects.some(e => e.type === 'request_grant' || e.type === 'request')).toBe(false);
+  expect(step(failed.attempt, { type: 'limiter_granted', request: 'task_post' }, time(5000), { taskPosts: 1 }).attempt.postCount).toBe(1);
+  expect(requestPolicy('live')).toEqual({ uploadTries: 1, slotRefreshes: 0, taskPosts: 1 }); expect(requestPolicy('unexpected')).toBe(LIVE_REQUEST_POLICY);
+  expect(requestPolicy('fixture')).toEqual({ uploadTries: 3, slotRefreshes: 1, taskPosts: 3 });
 });
 test('cancel before sending releases; after sending is uncertain; after a definitive 429 releases', () => {
   const queuedPost = step(step(createAttempt(1, 'e'), { type: 'start' }, time(0)).attempt, { type: 'uploads_ok', srcFileId: 's', refFileId: 'r' }, time(0)).attempt;

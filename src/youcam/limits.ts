@@ -16,6 +16,17 @@ export const PUT_TIMEOUT_MS = 60_000;
 export const MAX_UPLOAD_TRIES = 3;
 export const MAX_SLOT_REFRESHES = 1;
 export const MAX_TASK_POSTS = 3;
+/**
+ * Per-mode request policy. Live mode sends each upload-slot POST, presigned PUT and cloth-task POST at most once
+ * per attempt: no automatic retry, no 403 slot refresh, no 429 task re-submission. A failure stops the attempt
+ * before (or as) the task is created and settles the reservation. Status-poll GETs are not retries.
+ * Fixture mode keeps the frozen-plan retries for its simulated failure scenarios.
+ */
+export interface RequestPolicy { readonly uploadTries: number; readonly slotRefreshes: number; readonly taskPosts: number }
+export const LIVE_REQUEST_POLICY: RequestPolicy = { uploadTries: 1, slotRefreshes: 0, taskPosts: 1 };
+export const FIXTURE_REQUEST_POLICY: RequestPolicy = { uploadTries: MAX_UPLOAD_TRIES, slotRefreshes: MAX_SLOT_REFRESHES, taskPosts: MAX_TASK_POSTS };
+// Anything that is not explicitly the fixture uses the strict live policy.
+export const requestPolicy = (mode: string): RequestPolicy => mode === 'fixture' ? FIXTURE_REQUEST_POLICY : LIVE_REQUEST_POLICY;
 export const GET_TIMEOUT_MS = 15_000;
 export const GET_BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000] as const;
 export const BACKOFF_JITTER = 0.2;
