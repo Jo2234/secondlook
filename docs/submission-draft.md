@@ -1,6 +1,6 @@
 # SecondLook: Devpost submission draft
 
-Status: copy-ready for Johan's review. Live facts come from the verified run on 23 Oct 2026. The video link below is still a placeholder; fill it in before submitting.
+Status: final copy. Live facts come from the verified run on 23 Oct 2026; the repository and video links are published.
 
 ## Project name
 
@@ -78,4 +78,4 @@ Live mode uses your own YouCam API key: see "Live mode" in the README. `pnpm you
 ## Links
 
 - Repository: https://github.com/Jo2234/secondlook (public, MIT)
-- Video: **[PENDING: YouTube URL]**
+- Video: https://youtu.be/rHEfBEPukdU (2:07, silent captioned demo of the live run)
