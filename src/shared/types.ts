@@ -118,7 +118,8 @@ export type ApiResponse<T> = T & { mode: Mode };
 export interface InvalidRequestResponse { mode: Mode; error: "invalid_request"; issues: { path: (string | number)[]; message: string }[] }
 export interface PhotoUploadResponse { mode: Mode; photo: StoredPhoto; quality: QualityReport | null }
 export interface EvaluatePhotoRequest { declaration: GarmentDeclaration }
-export interface ModelOption { photoId: Id; label: string; rightsId: string | null; source: StoredPhoto["source"]; synthetic: boolean }
+// synthetic = DEMO fixture mannequin; provenance separates consented people from AI-generated fictional live inputs.
+export interface ModelOption { photoId: Id; label: string; rightsId: string | null; source: StoredPhoto["source"]; synthetic: boolean; provenance: "demo_placeholder" | "recorded_consent" | "ai_generated_fictional" }
 export interface ModelsResponse { mode: Mode; models: ModelOption[] }
 export interface ListingReadiness { ready: boolean; missing: string[] }
 export interface ListingResponse extends Listing { readiness: ListingReadiness }

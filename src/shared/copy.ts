@@ -108,6 +108,8 @@ export const UI_COPY = {
   liveIntro: 'Build a listing from the original photo, measured details and clearly labelled AI try-on previews.',
   liveNote: 'Live YouCam generation is enabled. Review the unit cost before sending a request.',
   liveStep: '03 / AI try-on preview', liveModels: 'Choose one or two consenting models', consented: 'Consented model photo',
+  syntheticInput: 'AI-generated fictional model · sample input, not a real person',
+  syntheticInputNote: 'Sample input: this model picture was AI-generated for testing and shows no real person. It is a source photo sent to YouCam, not a YouCam result.',
   liveGenerate: 'Review live request', liveCostTitle: 'Confirm live YouCam request',
   liveAdmission: 'Generating sends garment and model photos to YouCam (Perfect Corp.) and spends real account units. Each listing can be admitted once in this page session.',
   liveUnknown: 'Units may have been spent. Keep the original request ID and reconcile before considering any further action. A missing request or failed lookup does not prove that nothing was admitted; writes stay locked.',

@@ -15,7 +15,7 @@ function inputs(): FixtureInputs {
     health: { mode: 'fixture', version: '0.0.0', thresholdsVersion: 'q1-2026-10-19', buyerUpload: 'disabled', preflight: null, capabilities: [capability] },
     listing: { id: id(1), mode: 'fixture', title: 'Sample top', conditionNotes: '', priceText: null, garmentPhotoIds: [id(2)], declaration, measurements: { category: 'upper_body', valuesMm: { pit_to_pit: 500, length: 600, shoulder: 400, sleeve: 'na' }, enteredUnit: 'cm', tagSize: null }, tryOnResultIds: [], status: 'ready', createdAt: at, updatedAt: at, readiness: { ready: true, missing: [] } },
     photoId: id(2), declaration, quality: { photoId: id(2), role: 'garment', verdict: 'pass', checks: [{ id: 'capability', severity: 'pass', measured: null, threshold: 'fixture documented', messageKey: 'capability', source: 'capability' }], thresholdsVersion: 'q1-2026-10-19', capability, spendAllowed: true },
-    models: [3, 4].map(n => ({ photoId: id(n), label: 'Synthetic fixture model', rightsId: null, source: 'synthetic', synthetic: true })), modelIds: [id(3), id(4)], dirty: false,
+    models: [3, 4].map(n => ({ photoId: id(n), label: 'Synthetic fixture model', rightsId: null, source: 'synthetic', synthetic: true, provenance: 'demo_placeholder' as const })), modelIds: [id(3), id(4)], dirty: false,
   };
 }
 function envelope(r: FixtureReview): JobsResponse {
@@ -121,7 +121,7 @@ describe('fixture admission controller — 30 draft cases, no React/network/prov
 
 function liveInputs(): FixtureInputs {
   const i = inputs(); i.health!.mode = 'live'; i.listing!.mode = 'live';
-  i.models = i.models.map(m => ({ ...m, synthetic: false, source: 'rights_manifest', rightsId: 'consent-1' }));
+  i.models = i.models.map(m => ({ ...m, synthetic: false, source: 'rights_manifest', rightsId: 'consent-1', provenance: 'recorded_consent' as const }));
   i.units = { mode: 'live', preflight: { at: new Date().toISOString(), baseUrl: 'https://example.invalid', fenceSeq: 0,
     featureCost: { matched: [], status: 'ok', costPerTaskCu: 125 }, balanceCu: 1000, ok: true, problems: [] },
     budgetCu: 1000, committedCu: 0, remainingBudgetCu: 1000, balanceEstimateCu: 1000, ledger: [] };
@@ -133,7 +133,12 @@ describe('live admission uses reviewed cost, rights and current mode', () => {
     const r = c.open(i, UUID); expect(admissionBody(r).confirmCostCu).toBe(250);
     expect(c.claim(r, i)).toBe(true); expect(c.startPost(r, i)?.confirmCostCu).toBe(250);
   });
-  it.each(['missing', 'stale', 'boundary', 'future', 'status', 'not_ok', 'synthetic', 'source', 'rights', 'budget', 'balance', 'health', 'listing', 'units', 'negative', 'fractional', 'null'] as const)('rejects %s', reason => {
+  it('admits AI-generated fictional manifest models but never demo placeholders in live mode', () => {
+    const i = liveInputs(); i.models = i.models.map(m => ({ ...m, provenance: 'ai_generated_fictional' as const }));
+    expect(admissionReady(i, 'live', i.units)).toBe(true);
+    i.models[1]!.provenance = 'demo_placeholder'; expect(admissionReady(i, 'live', i.units)).toBe(false);
+  });
+  it.each(['missing', 'stale', 'boundary', 'future', 'status', 'not_ok', 'synthetic', 'provenance', 'source', 'rights', 'budget', 'balance', 'health', 'listing', 'units', 'negative', 'fractional', 'null'] as const)('rejects %s', reason => {
     const i = liveInputs(), u = i.units!, p = u.preflight!;
     if (reason === 'missing') u.preflight = null;
     if (reason === 'stale') p.at = new Date(Date.now() - 31 * 60000).toISOString();
@@ -142,6 +147,7 @@ describe('live admission uses reviewed cost, rights and current mode', () => {
     if (reason === 'status') p.featureCost.status = 'cost_unknown';
     if (reason === 'not_ok') p.ok = false;
     if (reason === 'synthetic') i.models[0]!.synthetic = true;
+    if (reason === 'provenance') i.models[0]!.provenance = 'demo_placeholder';
     if (reason === 'source') i.models[0]!.source = 'seller_upload';
     if (reason === 'rights') i.models[0]!.rightsId = null;
     if (reason === 'budget') u.remainingBudgetCu = 249;

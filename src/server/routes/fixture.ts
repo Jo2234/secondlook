@@ -59,7 +59,7 @@ export function fixtureRoutes(app: Hono, env: AppEnv, services: Services): void 
     await sweepExpired(store, Date.now()); await next();
   });
   const liveModel = (p: StoredPhoto) => p.role === 'model' && p.mode === 'live' && p.source === 'rights_manifest' && p.rightsId !== null && services.rights?.get(p.rightsId)?.sha256 === p.original.sha256;
-  app.get('/api/models', c => c.json({ mode: env.mode, models: store.snapshot().photos.filter(p => env.mode === 'fixture' ? p.role === 'model' && p.source === 'synthetic' : liveModel(p)).map(p => ({ photoId: p.id, label: env.mode === 'fixture' ? 'DEMO synthetic mannequin' : services.rights!.get(p.rightsId!)!.displayLabel, rightsId: p.rightsId, source: p.source, synthetic: env.mode === 'fixture' })) }));
+  app.get('/api/models', c => c.json({ mode: env.mode, models: store.snapshot().photos.filter(p => env.mode === 'fixture' ? p.role === 'model' && p.source === 'synthetic' : liveModel(p)).map(p => ({ photoId: p.id, label: env.mode === 'fixture' ? 'DEMO synthetic mannequin' : services.rights!.get(p.rightsId!)!.displayLabel, rightsId: p.rightsId, source: p.source, synthetic: env.mode === 'fixture', provenance: env.mode === 'fixture' ? 'demo_placeholder' : services.rights!.get(p.rightsId!)!.provenance })) }));
   app.post('/api/photos', async c => {
     const body = await c.req.parseBody();
     if (body.role !== 'garment' || !(body.file instanceof File)) throw new RouteError('invalid_request', 400);

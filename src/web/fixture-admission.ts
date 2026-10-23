@@ -30,7 +30,7 @@ export function fixtureReady(i: FixtureInputs): boolean {
     || !['documented', 'unverified', 'live_ok'].includes(q.capability.status)) return false;
   return ModelsResponseSchema.safeParse({ mode: 'fixture', models: i.models }).success
     && i.modelIds.length >= 1 && i.modelIds.length <= 2 && new Set(i.modelIds).size === i.modelIds.length
-    && i.modelIds.every(id => i.models.filter(m => m.photoId === id && m.synthetic && m.source === 'synthetic').length === 1);
+    && i.modelIds.every(id => i.models.filter(m => m.photoId === id && m.synthetic && m.source === 'synthetic' && m.provenance === 'demo_placeholder').length === 1);
 }
 export const unitsKey = (u: UnitsResponse | null | undefined): string => JSON.stringify(u ?? null);
 export function admissionReady(i: FixtureInputs, mode: Mode = i.health?.mode ?? 'fixture', units = i.units): boolean {
@@ -41,13 +41,13 @@ export function admissionReady(i: FixtureInputs, mode: Mode = i.health?.mode ?? 
     || !p?.ok || p.featureCost.status !== 'ok' || !Number.isSafeInteger(cost) || cost === null || cost === undefined || cost < 0
     || !Number.isFinite(age) || age < 0 || age >= 30 * 60 * 1000
     || !ModelsResponseSchema.safeParse({ mode, models: i.models }).success
-    || !i.modelIds.every(id => i.models.filter(m => m.photoId === id && m.source === 'rights_manifest' && !m.synthetic && Boolean(m.rightsId)).length === 1)) return false;
+    || !i.modelIds.every(id => i.models.filter(m => m.photoId === id && m.source === 'rights_manifest' && !m.synthetic && m.provenance !== 'demo_placeholder' && Boolean(m.rightsId)).length === 1)) return false;
   const need = cost * i.modelIds.length;
   if (!Number.isSafeInteger(need) || !Number.isSafeInteger(units.remainingBudgetCu) || units.remainingBudgetCu < need
     || units.balanceEstimateCu === null || !Number.isSafeInteger(units.balanceEstimateCu) || units.balanceEstimateCu - need < cost) return false;
   // Reuse every fixture quality/saved-input condition with provenance already checked above.
   return fixtureReady({ ...i, health: { ...i.health, mode: 'fixture' }, listing: { ...i.listing, mode: 'fixture' },
-    models: i.models.map(m => ({ ...m, source: 'synthetic', synthetic: true })) });
+    models: i.models.map(m => ({ ...m, source: 'synthetic', synthetic: true, provenance: 'demo_placeholder' })) });
 }
 export function admissionBody(r: FixtureReview): TryOnRequest {
   if ((r.mode ?? 'fixture') === 'fixture') return fixtureBody(r);
@@ -163,5 +163,5 @@ export const fixtureHealth = (v: unknown): boolean => HealthResponseSchema.safeP
 export const fixtureModels = (v: unknown): boolean => {
   const p = ModelsResponseSchema.safeParse(v);
   return p.success && p.data.mode === 'fixture' && new Set(p.data.models.map(m => m.photoId)).size === p.data.models.length
-    && p.data.models.every(m => m.synthetic && m.source === 'synthetic');
+    && p.data.models.every(m => m.synthetic && m.source === 'synthetic' && m.provenance === 'demo_placeholder');
 };

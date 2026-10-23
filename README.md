@@ -48,6 +48,7 @@ Live mode uses **your own** YouCam API key and units. Live mode never falls back
    ```
    Live data is kept in `./data-live` (separate from demo data in `./data`).
 3. Add a consented model photo. Person photos are only accepted from a local **rights manifest** (`data-live/rights/manifest.json`, format in `docs/rights-manifest.example.json`). An entry is used only if the subject is an adult who consented to AI processing and was told how long YouCam keeps uploaded images (see Privacy), and the file's SHA-256 matches. Buyers cannot upload photos in this build (see Privacy).
+   An AI-generated picture of a fictional adult can be used instead, as a `synthetic_generated` entry. That entry type has no consent fields; it needs `fictionalNoRealSubject` and `depictsAdult` set to true, the generator name, and a provenance file (in the manifest folder) that lists the same generator and the file's SHA-256. The studio labels such models as AI-generated sample inputs.
 4. Check cost and balance without spending anything:
    ```bash
    pnpm youcam:preflight   # GET feature-cost + GET credit only; creates no task, spends 0 units

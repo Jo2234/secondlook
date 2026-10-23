@@ -20,15 +20,20 @@ SecondLook is a seller studio for thrift and resale listings:
 
 1. **Photo quality gate before any spend.** The seller uploads one garment photo and declares how it was taken (hanger, mannequin, flat-lay or worn) and the garment category. SecondLook checks the photo against YouCam's documented input rules (size, format, dimensions, sharpness, exposure, plain background, single front-facing garment). Combinations that YouCam's documentation says are unsupported, such as lower-body garments photographed off-body, are blocked with a retake tip, so no units are spent on a photo that would be rejected.
 2. **Measurements, not size claims.** Category-specific flat measurements in cm or inches, plus an optional "compare with a garment you own" panel that shows only signed differences.
-3. **AI try-on preview with YouCam AI Clothes v4.** The seller picks a consenting model photo. SecondLook first reads the cloth-v4 unit cost and the account balance from YouCam (0 units), then shows a review dialog with the per-try-on cost, the total units to be spent and the balance. Only after the seller confirms does it upload the photos with the File API, create the cloth-v4 task, poll it with a deadline and download the result.
+3. **AI try-on preview with YouCam AI Clothes v4.** The seller picks a model photo from a local rights manifest: either a consenting adult, or an AI-generated fictional adult whose provenance record lists its generator and file hash. SecondLook first reads the cloth-v4 unit cost and the account balance from YouCam (0 units), then shows a review dialog with the per-try-on cost, the total units to be spent and the balance. Only after the seller confirms does it upload the photos with the File API, create the cloth-v4 task, poll it with a deadline and download the result.
 4. **Original first, approximate always labelled.** The original garment photo is the only allowed cover. Generated images carry "AI-generated preview from YouCam · approximate" burned into the pixels and in the UI. Listing text is built only from the seller's saved facts.
 5. **Units ledger and uncertain states.** Every request reserves its units, then settles as spent, released or possibly spent. If a connection drops while a task is being created, SecondLook locks writes and says units may have been charged instead of silently retrying.
 6. **Privacy-first buyer flow.** A buyer "try it on yourself" flow is designed but switched off in this build, because SecondLook can't control how long the AI provider keeps uploaded photos; the app explains why in plain words.
+
+## Demo inputs
+
+The model and the garment in our demo are AI-generated sample images, made with OpenAI image generation. The model is a fictional adult, not a real person. The jacket is a synthetic, unbranded sample, not a real resale item, and its measurements in the demo are illustrative. The app labels these as synthetic inputs, separate from DEMO placeholders and from the images YouCam returns. We have not yet tested try-on results on real resale inventory.
 
 ## How we built it
 
 - **YouCam APIs:** AI Clothes virtual try-on v4 (`POST /s2s/v2.0/task/cloth-v4` and `GET /s2s/v2.0/task/cloth-v4/{task_id}`), the File API (`POST /s2s/v2.0/file` plus the presigned `PUT`), and the unit system (`GET /s2s/v2.0/credit/feature-cost`, `GET /s2s/v1.0/client/credit`).
 - **Stack:** TypeScript on Node 24, Hono API server, React 19 + Vite seller studio, sharp for bounded image decoding, zod schemas, Vitest + fast-check + Playwright.
+- **Rights manifest:** model photos are admitted only from a local manifest. Real people need recorded adult consent and retention disclosure. AI-generated fictional models use a separate entry type that can't carry consent fields; it needs a provenance record that names the generator and the file's SHA-256.
 - **Reliability:** a pure job state machine and units ledger; a single-owner durable store with crash recovery; a sliding-window rate limiter under the documented 250 requests / 300 s; HTTPS only to the documented API and media hosts, with DNS checks and no redirects; every documented YouCam error code mapped to seller guidance.
 - **Demo mode:** a fixture adapter with synthetic images lets anyone run the whole flow without a key. Everything in demo mode is watermarked "DEMO FIXTURE · NOT A YOUCAM RESULT", and live mode never falls back to demo data.
 
@@ -46,7 +51,7 @@ SecondLook is a seller studio for thrift and resale listings:
 
 ## What we learned
 
-**[PENDING: Johan's own words.]**
+We learned that a useful virtual try-on tool needs to make its limits clear. Keeping the original photo first, showing real measurements and labelling AI previews as approximate helps buyers understand what they are looking at. We also learned to check generation costs upfront and handle uncertain API outcomes without automatically retrying.
 
 ## What's next
 

@@ -51,7 +51,7 @@ test('live session uses eligible rights, free preflight, durable admission and r
   try {
     await session.ready; const app = captured.app!;
     const models = await (await app.request('/api/models')).json(); expect(models.models).toHaveLength(1);
-    expect(models.models[0]).toMatchObject({ rightsId: 'test-model', label: entry.displayLabel, synthetic: false, source: 'rights_manifest' });
+    expect(models.models[0]).toMatchObject({ rightsId: 'test-model', label: entry.displayLabel, synthetic: false, source: 'rights_manifest', provenance: 'recorded_consent' });
     const form = new FormData(); form.set('role', 'garment'); form.set('file', new File([garmentBytes], 'tee.png', { type: 'image/png' }));
     const upload = await app.request('/api/photos', { method: 'POST', body: form }); expect(upload.status).toBe(200);
     const { photo } = await upload.json(); expect(photo.mode).toBe('live');
