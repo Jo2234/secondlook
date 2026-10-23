@@ -1,6 +1,6 @@
 # SecondLook: Devpost submission draft
 
-Status: draft for Johan's review. Lines marked **[PENDING LIVE]** must be replaced with facts from the live run before submitting. Do not submit those placeholders.
+Status: copy-ready for Johan's review. Live facts come from the verified run on 23 Oct 2026. The repository and video links below are still placeholders; fill them in before submitting.
 
 ## Project name
 
@@ -41,13 +41,14 @@ The model and the garment in our demo are AI-generated sample images, made with 
 
 - The cloth-v4 unit price isn't listed in the documentation table (which lists v2 and v3), so SecondLook binds the cost from the live feature-cost endpoint and refuses to spend when the price is missing or ambiguous.
 - Documentation differs on some input rules (for example full-body versus chest-up target photos), so the quality gate follows the conservative reading and labels unverified input types.
+- Our first live attempt stopped before any task was created, and no units were spent. The File API response came wrapped in a `data` object, as the AI Clothes guide shows, not in the shape on the File API reference page. We fixed the parser and made live mode send each upload and the try-on request only once.
 - Handling "did this task start?" honestly: a timeout while creating a task may still have charged units, so the ledger keeps a "possibly spent" state instead of retrying.
 
 ## Accomplishments we're proud of
 
 - A complete seller flow where the honest choice is the default: original photo first, measurements over claims, and AI previews labelled approximate in the pixels.
 - No unit is spent without a 0-unit cost and balance check and an explicit confirmation of the total.
-- **[PENDING LIVE]** Live run: cloth-v4 cost read from feature-cost = `<n>` units per try-on; result generated in `<s>` seconds; units spent `<n>`.
+- A verified live run on 23 Oct 2026, using the AI-generated sample model and jacket: YouCam's feature-cost endpoint reported 2 units per AI Clothes v4 try-on; the result came back about 12 seconds after the task was submitted (about 15 seconds from confirming the request); 2 units were spent, and the balance went from 1,040 to 1,038.
 
 ## What we learned
 

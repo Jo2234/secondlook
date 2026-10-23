@@ -65,6 +65,10 @@ Live mode uses **your own** YouCam API key and units. Live mode never falls back
 - Live mode sends each photo upload (one File API slot request and one upload per photo) and the try-on task request once. There is no automatic retry or upload-slot refresh; a failure stops the attempt and releases the reserved units if no task was created. Status polling continues normally while a task runs.
 - If a request's outcome is unknown (e.g. the connection drops while starting a task), the UI locks writes, says units may have been charged, and never retries automatically.
 
+## Live verification
+
+On 23 Oct 2026 one live AI Clothes v4 try-on ran through the studio with AI-generated sample inputs (a fictional adult model and a synthetic jacket). The 0-unit check reported 2 units per try-on. The job made one File API slot request and one upload per photo, one task request, two status polls and one result download. The task finished about 12 seconds after it was submitted, and 2 units were spent. An earlier attempt stopped at the upload step because of a response-format mismatch; no task was created and nothing was spent.
+
 ## Privacy
 
 Try it on yourself is turned off in this build. We haven't enabled personal photo uploads yet, because SecondLook can't control how long the AI provider keeps them:
